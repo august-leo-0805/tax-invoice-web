@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>전자세금계산서 관리 대시보드</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-800">
+    <div class="max-w-6xl mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">국세청 전자세금계산서 관리 시스템</h1>
+            <p class="text-gray-500 mt-1">홈택스에서 다운로드한 세금계산서 엑셀 파일을 업로드하고 관리하세요.</p>
+        </header>
+
+        <!-- Upload & Actions -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8">
+            <h2 class="text-lg font-semibold mb-3">엑셀 파일 업로드</h2>
+            <div class="flex items-center space-x-4">
+                <input type="file" id="fileInput" accept=".xlsx, .xls" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
+                <button onclick="uploadFile()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-lg transition whitespace-nowrap">업로드</button>
+            </div>
+            <div id="uploadStatus" class="mt-3 text-sm hidden"></div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                <span class="text-gray-500 text-sm font-medium">총 건수</span>
+                <p id="totalCount" class="text-2xl font-bold text-gray-900 mt-1">0 건</p>
+            </div>
+            <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                <span class="text-gray-500 text-sm font-medium">총 공급가액</span>
+                <p id="totalSupply" class="text-2xl font-bold text-blue-600 mt-1">0 원</p>
+            </div>
+            <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                <span class="text-gray-500 text-sm font-medium">총 세액</span>
+                <p id="totalTax" class="text-2xl font-bold text-emerald-600 mt-1">0 원</p>
+            </div>
+            <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                <span class="text-gray-500 text-sm font-medium">총 합계금액</span>
+                <p id="totalAmount" class="text-2xl font-bold text-indigo-600 mt-1">0 원</p>
+            </div>
+        </div>
+
+        <!-- Data Table Container -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="p-5 border-b border-gray-200 flex justify-between items-center">
+                <input type="text" id="searchInput" oninput="fetchInvoices()" placeholder="공급자 상호 또는 사업자번호 검색..." class="w-72 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
+                <button onclick="clearInvoices()" class="text-red-600 hover:text-red-800 text-sm font-medium">전체 데이터 초기화</button>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm text-gray-600">
+                    <thead class="bg-gray-50 text-gray-700 uppercase font-semibold text-xs border-b border-gray-200">
+                        <tr>
+                            <th class="py-3 px-4">작성일자</th>
+                            <th class="py-3 px-4">공급자 상호</th>
+                            <th class="py-3 px-4">사업자번호</th>
+                            <th class="py-3 px-4 text-right">공급가액</th>
+                            <th class="py-3 px-4 text-right">세액</th>
+                            <th class="py-3 px-4 text-right">합계금액</th>
+                            <th class="py-3 px-4">승인번호</th>
+                        </tr>
+                    </thead>
+                    <tbody id="invoiceTableBody" class="divide-y divide-gray-100">
+                        <!-- Dynamic Rows -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = "http://localhost:8000/api";
+
+        async function uploadFile() {
+            const input = document.getElementById('fileInput');
+            const status = document.getElementById('uploadStatus');
+            
+            if (!input.files[0]) {
+                alert("엑셀 파일을 선택해주세요.");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', input.files[0]);
+
+            status.className = "mt-3 text-sm text-blue-600 block";
+            status.innerText = "파일 분석 및 업로드 중...";
+
+            try {
+                const res = await fetch(`${API_BASE}/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                
+                if (res.ok) {
+                    status.className = "mt-3 text-sm text-emerald-600 block";
+                    status.innerText = `성공! ${data.inserted}건 추가 (중복 ${data.duplicates}건 제외)`;
+                    fetchInvoices();
+                } else {
+                    throw new Error(data.detail || "업로드 실패");
+                }
+            } catch (err) {
+                status.className = "mt-3 text-sm text-red-600 block";
+                status.innerText = err.message;
+            }
+        }
+
+        async function fetchInvoices() {
+            const query = document.getElementById('searchInput').value;
+            const url = query ? `${API_BASE}/invoices?search=${encodeURIComponent(query)}` : `${API_BASE}/invoices`;
+
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                // Update Summary
+                document.getElementById('totalCount').innerText = `${data.summary.total_count.toLocaleString()} 건`;
+                document.getElementById('totalSupply').innerText = `${data.summary.total_supply.toLocaleString()} 원`;
+                document.getElementById('totalTax').innerText = `${data.summary.total_tax.toLocaleString()} 원`;
+                document.getElementById('totalAmount').innerText = `${data.summary.total_amount.toLocaleString()} 원`;
+
+                // Update Table
+                const tbody = document.getElementById('invoiceTableBody');
+                tbody.innerHTML = "";
+
+                if (data.items.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-gray-400">등록된 세금계산서 데이터가 없습니다.</td></tr>`;
+                    return;
+                }
+
+                data.items.forEach(item => {
+                    const row = `
+                        <tr class="hover:bg-gray-50 transition">
+                            <td class="py-3 px-4 font-medium text-gray-900">${item.issue_date}</td>
+                            <td class="py-3 px-4 font-semibold">${item.supplier_name}</td>
+                            <td class="py-3 px-4 text-gray-500">${item.supplier_biz_num}</td>
+                            <td class="py-3 px-4 text-right font-medium text-blue-700">${item.supply_value.toLocaleString()} 원</td>
+                            <td class="py-3 px-4 text-right text-emerald-700">${item.tax_amount.toLocaleString()} 원</td>
+                            <td class="py-3 px-4 text-right font-bold text-gray-900">${item.total_amount.toLocaleString()} 원</td>
+                            <td class="py-3 px-4 text-xs font-mono text-gray-400">${item.approval_num}</td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                });
+            } catch (err) {
+                console.error("데이터 조회 실패:", err);
+            }
+        }
+
+        async function clearInvoices() {
+            if (!confirm("전체 데이터를 정말 초기화하시겠습니까?")) return;
+            await fetch(`${API_BASE}/invoices`, { method: 'DELETE' });
+            fetchInvoices();
+        }
+
+        // Init load
+        fetchInvoices();
+    </script>
+</body>
+</html>
