@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException, Query
+from fastapi import FastAPI, UploadFile, File, HTTPException, Query, Form
 from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 import sqlite3
@@ -7,7 +7,6 @@ import re
 
 app = FastAPI(title="Tax Invoice Management API")
 
-# CORS setup for Frontend integration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -31,19 +30,21 @@ def init_db():
             supply_value INTEGER,
             tax_amount INTEGER,
             total_amount INTEGER,
+            is_tax_exempt INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    try:
+        cursor.execute("ALTER TABLE invoices ADD COLUMN is_tax_exempt INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass # 이미 컬럼이 존재하는 경우
+        
     conn.commit()
     conn.close()
 
 init_db()
 
 def extract_field(row, target_keywords):
-    """
-    row(행 데이터)에서 띄어쓰기나 특수문자를 제거한 후 
-    target_keywords 중 하나라도 포함된 열의 값을 찾아 반환합니다.
-    """
     for col_name, val in row.items():
         clean_col = re.sub(r'[\s\n\(\)]', '', str(col_name))
         for key in target_keywords:
@@ -53,7 +54,10 @@ def extract_field(row, target_keywords):
     return ""
 
 @app.post("/api/upload")
-async def upload_excel(file: UploadFile = File(...)):
+async def upload_excel(
+    file: UploadFile = File(...),
+    is_tax_exempt: bool = Form(False)
+):
     if not file.filename.endswith(('.xlsx', '.xls')):
         raise HTTPException(status_code=400, detail="엑셀(.xlsx, .xls) 파일만 업로드 가능합니다.")
 
@@ -62,7 +66,6 @@ async def upload_excel(file: UploadFile = File(...)):
     try:
         raw_df = pd.read_excel(io.BytesIO(contents), header=None)
         
-        # '작성일자' 또는 '승인번호'가 있는 헤더 행 찾기
         header_idx = None
         for i, row in raw_df.iterrows():
             row_str = " ".join([str(val) for val in row.values])
@@ -81,26 +84,27 @@ async def upload_excel(file: UploadFile = File(...)):
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
 
+        tax_exempt_flag = 1 if is_tax_exempt else 0
+
         for _, row in df.iterrows():
-            # 유연한 열이름 매핑 탐색
             date_val = extract_field(row, ['작성일자', '발급일자'])
             if not date_val:
-                continue # 작성일자가 없는 합계/빈 행은 제외
+                continue
 
             app_num = extract_field(row, ['승인번호'])
-            
-            # 공급자 상호 (매출일 경우 공급받는자 상호까지 탐색)
             name_val = extract_field(row, ['공급자상호', '공급자상호성명', '상호', '공급받는자상호'])
-            
-            # 사업자등록번호
             biz_num = extract_field(row, ['공급자사업자등록번호', '공급자등록번호', '사업자등록번호', '공급받는자사업자등록번호'])
             
-            # 공급가액 및 세액 추출
             supply_raw = extract_field(row, ['공급가액', '공급가']).replace(',', '').split('.')[0]
             tax_raw = extract_field(row, ['세액', '부가세']).replace(',', '').split('.')[0]
             
             supply_val = int(supply_raw) if supply_raw.lstrip('-').isdigit() else 0
             tax_val = int(tax_raw) if tax_raw.lstrip('-').isdigit() else 0
+            
+            # 면세계산서 체크 시 세액은 0원 처리
+            if tax_exempt_flag:
+                tax_val = 0
+                
             total_val = supply_val + tax_val
 
             if not app_num or app_num in ('nan', 'None', ''):
@@ -108,9 +112,9 @@ async def upload_excel(file: UploadFile = File(...)):
 
             try:
                 cursor.execute('''
-                    INSERT INTO invoices (approval_num, issue_date, supplier_biz_num, supplier_name, supply_value, tax_amount, total_amount)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                ''', (app_num, date_val, biz_num, name_val, supply_val, tax_val, total_val))
+                    INSERT INTO invoices (approval_num, issue_date, supplier_biz_num, supplier_name, supply_value, tax_amount, total_amount, is_tax_exempt)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (app_num, date_val, biz_num, name_val, supply_val, tax_val, total_val, tax_exempt_flag))
                 inserted_cnt += 1
             except sqlite3.IntegrityError:
                 duplicate_cnt += 1
