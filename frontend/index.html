@@ -6,6 +6,45 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>전자세금계산서 관리 대시보드</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @media print {
+            body>* {
+                display: none !important;
+            }
+
+            body>#invoiceModal {
+                display: block !important;
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: transparent !important;
+                overflow: visible !important;
+            }
+
+            #printableInvoice,
+            #printableInvoice * {
+                visibility: visible !important;
+            }
+
+            #printableInvoice {
+                position: relative !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 15px !important;
+                box-shadow: none !important;
+                background-color: white !important;
+                border: 2px solid #2563eb !important;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
 </head>
 
 <body class="bg-gray-50 text-gray-800">
@@ -23,7 +62,6 @@
                 <input type="file" id="fileInput" accept=".xlsx, .xls"
                     class="block w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
 
-                <!-- 면세 체크박스 -->
                 <label
                     class="inline-flex items-center space-x-2 cursor-pointer whitespace-nowrap border border-gray-200 px-3 py-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 transition">
                     <input type="checkbox" id="isTaxExempt"
@@ -78,6 +116,7 @@
                             <th class="py-3 px-4 text-right">세액</th>
                             <th class="py-3 px-4 text-right">합계금액</th>
                             <th class="py-3 px-4">승인번호</th>
+                            <th class="py-3 px-4 text-center">출력</th>
                         </tr>
                     </thead>
                     <tbody id="invoiceTableBody" class="divide-y divide-gray-100">
@@ -88,8 +127,198 @@
         </div>
     </div>
 
+    <!-- 전자세금계산서 서식 모달 -->
+    <div id="invoiceModal"
+        class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden flex items-center justify-center p-4 z-50 overflow-y-auto">
+        <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full p-6 relative">
+            <div class="flex justify-between items-center mb-4 no-print border-b pb-3">
+                <h3 class="text-lg font-bold text-gray-800">전자세금계산서 미리보기 / 인쇄</h3>
+                <div class="space-x-2">
+                    <button onclick="window.print()"
+                        class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition">인쇄
+                        / PDF 저장</button>
+                    <button onclick="closeInvoiceModal()"
+                        class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg transition">닫기</button>
+                </div>
+            </div>
+
+            <!-- 홈택스 파란색 공급받는자 보관용 양식 -->
+            <div id="printableInvoice" class="border-2 border-blue-600 p-4 text-xs font-sans text-gray-900 bg-white">
+                <!-- 상단 타이틀 & 승인번호 -->
+                <div class="flex justify-between items-center border-b-2 border-blue-600 pb-2 mb-2">
+                    <div class="text-2xl font-bold text-blue-600 tracking-widest" id="modalInvoiceTitle">전자세금계산서</div>
+                    <div class="text-right">
+                        <span
+                            class="text-blue-700 font-bold border border-blue-600 px-1.5 py-0.5 rounded text-xs bg-blue-50">공급받는자
+                            보관용</span>
+                        <div class="text-xs text-gray-700 mt-1 font-mono">승인번호: <span id="modalApprovalNum"
+                                class="font-bold text-gray-900"></span></div>
+                    </div>
+                </div>
+
+                <!-- 공급자 / 공급받는자 인적사항 -->
+                <div class="grid grid-cols-2 gap-2 mb-2 border border-blue-600">
+                    <!-- 공급자 -->
+                    <table class="w-full text-left border-collapse">
+                        <tr class="border-b border-blue-300">
+                            <td rowspan="5"
+                                class="w-6 bg-blue-50 text-blue-800 font-bold text-center border-r border-blue-300">
+                                공<br>급<br>자</td>
+                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60 w-16">등록번호</td>
+                            <td class="p-1 font-mono font-bold border-r border-blue-200" id="modalSupplierBizNum"></td>
+                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60 w-16 text-center">종사업장</td>
+                            <td class="p-1 font-mono text-center" id="modalSupplierSubNum"></td>
+                        </tr>
+                        <tr class="border-b border-blue-300">
+                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60">상호(법인명)</td>
+                            <td class="p-1 font-bold" id="modalSupplierName"></td>
+                            <td class="p-1 font-bold border-r border-l border-blue-200 bg-blue-50/60 text-center">성명
+                            </td>
+                            <td class="p-1 font-medium" id="modalSupplierCeo"></td>
+                        </tr>
+                        <tr class="border-b border-blue-300">
+                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60">사업장주소</td>
+                            <td colspan="3" class="p-1 text-gray-800" id="modalSupplierAddr"></td>
+                        </tr>
+                        <tr class="border-b border-blue-300">
+                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60">업태</td>
+                            <td class="p-1 text-gray-800" id="modalSupplierBizType"></td>
+                            <td class="p-1 font-bold border-r border-l border-blue-200 bg-blue-50/60 text-center">종목
+                            </td>
+                            <td class="p-1 text-gray-800" id="modalSupplierBizItem"></td>
+                        </tr>
+                        <tr>
+                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60">이메일</td>
+                            <td colspan="3" class="p-1 font-mono text-gray-800" id="modalSupplierEmail"></td>
+                        </tr>
+                    </table>
+
+                    <!-- 공급받는자 -->
+                    <table class="w-full text-left border-collapse border-l border-blue-600">
+                        <tr class="border-b border-blue-300">
+                            <td rowspan="5"
+                                class="w-6 bg-blue-100 text-blue-900 font-bold text-center border-r border-blue-300">
+                                공<br>급<br>받<br>는<br>자</td>
+                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60 w-16">등록번호</td>
+                            <td class="p-1 font-mono font-bold border-r border-blue-200" id="modalReceiverBizNum"></td>
+                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60 w-16 text-center">종사업장</td>
+                            <td class="p-1 font-mono text-center" id="modalReceiverSubNum"></td>
+                        </tr>
+                        <tr class="border-b border-blue-300">
+                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60">상호(법인명)</td>
+                            <td class="p-1 font-bold" id="modalReceiverName"></td>
+                            <td class="p-1 font-bold border-r border-l border-blue-200 bg-blue-50/60 text-center">성명
+                            </td>
+                            <td class="p-1 font-medium" id="modalReceiverCeo"></td>
+                        </tr>
+                        <tr class="border-b border-blue-300">
+                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60">사업장주소</td>
+                            <td colspan="3" class="p-1 text-gray-800" id="modalReceiverAddr"></td>
+                        </tr>
+                        <tr class="border-b border-blue-300">
+                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60">업태</td>
+                            <td class="p-1 text-gray-800" id="modalReceiverBizType"></td>
+                            <td class="p-1 font-bold border-r border-l border-blue-200 bg-blue-50/60 text-center">종목
+                            </td>
+                            <td class="p-1 text-gray-800" id="modalReceiverBizItem"></td>
+                        </tr>
+                        <tr>
+                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60">이메일</td>
+                            <td colspan="3" class="p-1 font-mono text-gray-800" id="modalReceiverEmail"></td>
+                        </tr>
+                    </table>
+                </div>
+
+                <!-- 두 번째 표 -->
+                <table class="w-full text-center border border-blue-600 mb-2 border-collapse">
+                    <tr class="bg-blue-50 text-blue-900 font-bold border-b border-blue-300">
+                        <td class="p-1 border-r border-blue-300 w-1/4">작성일자</td>
+                        <td class="p-1 border-r border-blue-300 w-1/4">공급가액</td>
+                        <td class="p-1 border-r border-blue-300 w-1/4">세액</td>
+                        <td class="p-1 w-1/4">수정사유</td>
+                    </tr>
+                    <tr class="font-bold text-sm border-b border-blue-300">
+                        <td class="p-1.5 border-r border-blue-300 font-mono" id="modalIssueDate"></td>
+                        <td class="p-1.5 border-r border-blue-300 text-right pr-3 font-mono text-blue-800"
+                            id="modalSupplyValue"></td>
+                        <td class="p-1.5 border-r border-blue-300 text-right pr-3 font-mono text-blue-700"
+                            id="modalTaxAmount"></td>
+                        <td class="p-1 text-xs font-normal text-gray-600" id="modalModifyReason">해당없음</td>
+                    </tr>
+                    <tr>
+                        <td class="bg-blue-50 text-blue-900 font-bold p-1 border-r border-blue-300 text-center">비고</td>
+                        <td colspan="3" class="p-1.5 text-xs font-normal text-gray-800 text-left pl-3"
+                            id="modalHeaderRemarks"></td>
+                    </tr>
+                </table>
+
+                <!-- 품목 상세 테이블 -->
+                <table class="w-full text-center border border-blue-600 mb-2 border-collapse">
+                    <thead class="bg-blue-50 text-blue-900 font-bold border-b border-blue-300">
+                        <tr>
+                            <th class="p-1 border-r border-blue-300 w-8">월</th>
+                            <th class="p-1 border-r border-blue-300 w-8">일</th>
+                            <th class="p-1 border-r border-blue-300">품목</th>
+                            <th class="p-1 border-r border-blue-300 w-16">규격</th>
+                            <th class="p-1 border-r border-blue-300 w-12">수량</th>
+                            <th class="p-1 border-r border-blue-300 w-20">단가</th>
+                            <th class="p-1 border-r border-blue-300 w-28">공급가액</th>
+                            <th class="p-1 border-r border-blue-300 w-24">세액</th>
+                            <th class="p-1 w-24">비고</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-blue-200">
+                        <tr>
+                            <td class="p-1 border-r border-blue-200 font-mono" id="modalItemMonth"></td>
+                            <td class="p-1 border-r border-blue-200 font-mono" id="modalItemDay"></td>
+                            <td class="p-1 border-r border-blue-200 text-left pl-2 font-medium" id="modalItemName"></td>
+                            <td class="p-1 border-r border-blue-200" id="modalItemSpec"></td>
+                            <td class="p-1 border-r border-blue-200 font-mono" id="modalItemQty"></td>
+                            <td class="p-1 border-r border-blue-200 text-right pr-2 font-mono" id="modalItemPrice"></td>
+                            <td class="p-1 border-r border-blue-200 text-right pr-2 font-mono font-semibold text-blue-900"
+                                id="modalItemSupply"></td>
+                            <td class="p-1 border-r border-blue-200 text-right pr-2 font-mono font-semibold text-blue-800"
+                                id="modalItemTax"></td>
+                            <td class="p-1 text-left pl-2 text-gray-600" id="modalItemRemarks"></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- 결제 수단 및 영수/청구 구분 -->
+                <table class="w-full text-center border border-blue-600 mb-2 border-collapse">
+                    <tr class="bg-blue-50 text-blue-900 font-bold border-b border-blue-300">
+                        <td class="p-1 border-r border-blue-300">합계금액</td>
+                        <td class="p-1 border-r border-blue-300">현 금</td>
+                        <td class="p-1 border-r border-blue-300">수 표</td>
+                        <td class="p-1 border-r border-blue-300">어 음</td>
+                        <td class="p-1 border-r border-blue-300">외상미수금</td>
+                        <td rowspan="2"
+                            class="p-2 w-36 align-middle font-sans text-xs bg-blue-50/50 text-blue-900 border-l border-blue-300">
+                            이 금액을 (<span id="modalClaimOrReceipt" class="font-bold text-blue-800 text-sm">청구</span>) 함
+                        </td>
+                    </tr>
+                    <tr class="font-mono font-bold">
+                        <td class="p-1.5 border-r border-blue-300 text-blue-700 text-sm" id="modalTotalAmount"></td>
+                        <td class="p-1.5 border-r border-blue-300" id="modalCashAmount"></td>
+                        <td class="p-1.5 border-r border-blue-300" id="modalCheckAmount"></td>
+                        <td class="p-1.5 border-r border-blue-300" id="modalNoteAmount"></td>
+                        <td class="p-1.5 border-r border-blue-300" id="modalUnpaidAmount"></td>
+                    </tr>
+                </table>
+
+                <!-- 국세청 홈택스 공식 안내문 -->
+                <div class="mt-2 pt-2 border-t border-blue-300 text-[10px] text-gray-500 leading-tight">
+                    <p>본 인쇄물은 국세청 홈택스(www.hometax.go.kr)에서 발급, 또는 홈택스로 전송 된 양식과 동일한 구성의 종이(세금)계산서입니다.</p>
+                    <p class="mt-0.5">발급사실 확인은 상기 홈페이지의 "전자(세금)계산서 조회 &gt; 제3자 발급사실 조회 및 수정 발급사실 알림 &gt; 발급사실 조회 및 수정
+                        발급사실 알림 신청"을 이용하시기 바랍니다. 발급된 전자세금계산서는 손택스에서도 확인할 수 있습니다.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API_BASE = "http://localhost:8000/api";
+        let invoiceList = [];
 
         async function uploadFile() {
             const input = document.getElementById('fileInput');
@@ -135,37 +364,41 @@
             try {
                 const res = await fetch(url);
                 const data = await res.json();
+                invoiceList = data.items;
 
-                // Update Summary
                 document.getElementById('totalCount').innerText = `${data.summary.total_count.toLocaleString()} 건`;
-                document.getElementById('totalSupply').innerText = `${data.summary.total_supply.toLocaleString()} 원`;
-                document.getElementById('totalTax').innerText = `${data.summary.total_tax.toLocaleString()} 원`;
-                document.getElementById('totalAmount').innerText = `${data.summary.total_amount.toLocaleString()} 원`;
+                document.getElementById('totalSupply').innerText = `${(data.summary.total_supply || 0).toLocaleString()} 원`;
+                document.getElementById('totalTax').innerText = `${(data.summary.total_tax || 0).toLocaleString()} 원`;
+                document.getElementById('totalAmount').innerText = `${(data.summary.total_amount || 0).toLocaleString()} 원`;
 
-                // Update Table
                 const tbody = document.getElementById('invoiceTableBody');
                 tbody.innerHTML = "";
 
                 if (data.items.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-gray-400">등록된 세금계산서 데이터가 없습니다.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-gray-400">등록된 세금계산서 데이터가 없습니다.</td></tr>`;
                     return;
                 }
 
-                data.items.forEach(item => {
+                data.items.forEach((item, index) => {
                     const taxBadge = item.is_tax_exempt
                         ? `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">면세</span>`
                         : `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-700 border border-gray-200">과세</span>`;
 
                     const row = `
                         <tr class="hover:bg-gray-50 transition">
-                            <td class="py-3 px-4 font-medium text-gray-900">${item.issue_date}</td>
-                            <td class="py-3 px-4 font-semibold">${item.supplier_name}</td>
-                            <td class="py-3 px-4 text-gray-500">${item.supplier_biz_num}</td>
+                            <td class="py-3 px-4 font-medium text-gray-900">${item.issue_date || ''}</td>
+                            <td class="py-3 px-4 font-semibold">${item.supplier_name || ''}</td>
+                            <td class="py-3 px-4 text-gray-500">${item.supplier_biz_num || ''}</td>
                             <td class="py-3 px-4 text-center">${taxBadge}</td>
-                            <td class="py-3 px-4 text-right font-medium text-blue-700">${item.supply_value.toLocaleString()} 원</td>
-                            <td class="py-3 px-4 text-right text-emerald-700">${item.tax_amount.toLocaleString()} 원</td>
-                            <td class="py-3 px-4 text-right font-bold text-gray-900">${item.total_amount.toLocaleString()} 원</td>
-                            <td class="py-3 px-4 text-xs font-mono text-gray-400">${item.approval_num}</td>
+                            <td class="py-3 px-4 text-right font-medium text-blue-700">${(item.supply_value || 0).toLocaleString()} 원</td>
+                            <td class="py-3 px-4 text-right text-emerald-700">${(item.tax_amount || 0).toLocaleString()} 원</td>
+                            <td class="py-3 px-4 text-right font-bold text-gray-900">${(item.total_amount || 0).toLocaleString()} 원</td>
+                            <td class="py-3 px-4 text-xs font-mono text-gray-400">${item.approval_num || ''}</td>
+                            <td class="py-3 px-4 text-center">
+                                <button onclick="openInvoiceModal(${index})" class="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-medium px-3 py-1 rounded text-xs transition">
+                                    🖨️ 출력
+                                </button>
+                            </td>
                         </tr>
                     `;
                     tbody.innerHTML += row;
@@ -175,13 +408,93 @@
             }
         }
 
+        function openInvoiceModal(index) {
+            const item = invoiceList[index];
+            if (!item) return;
+
+            const isExempt = !!item.is_tax_exempt;
+
+            document.getElementById('modalInvoiceTitle').innerText = isExempt ? '전자계산서(면세)' : '전자세금계산서';
+            document.getElementById('modalApprovalNum').innerText = item.approval_num || '';
+
+            // 공급자 정보 바인딩
+            document.getElementById('modalSupplierBizNum').innerText = item.supplier_biz_num || '';
+            document.getElementById('modalSupplierSubNum').innerText = item.supplier_sub_num || '';
+            document.getElementById('modalSupplierName').innerText = item.supplier_name || '';
+            document.getElementById('modalSupplierCeo').innerText = item.supplier_ceo || '';
+            document.getElementById('modalSupplierAddr').innerText = item.supplier_addr || '';
+            document.getElementById('modalSupplierBizType').innerText = item.supplier_biz_type || '';
+            document.getElementById('modalSupplierBizItem').innerText = item.supplier_biz_item || '';
+            document.getElementById('modalSupplierEmail').innerText = item.supplier_email || '';
+
+            // 공급받는자 정보 바인딩
+            document.getElementById('modalReceiverBizNum').innerText = item.receiver_biz_num || '';
+            document.getElementById('modalReceiverSubNum').innerText = item.receiver_sub_num || '';
+            document.getElementById('modalReceiverName').innerText = item.receiver_name || '';
+            document.getElementById('modalReceiverCeo').innerText = item.receiver_ceo || '';
+            document.getElementById('modalReceiverAddr').innerText = item.receiver_addr || '';
+            document.getElementById('modalReceiverBizType').innerText = item.receiver_biz_type || '';
+            document.getElementById('modalReceiverBizItem').innerText = item.receiver_biz_item || '';
+            document.getElementById('modalReceiverEmail').innerText = item.receiver_email || '';
+
+            // 작성일자 및 금액 요약 바인딩
+            document.getElementById('modalIssueDate').innerText = item.issue_date || '';
+            document.getElementById('modalSupplyValue').innerText = (item.supply_value || 0).toLocaleString();
+            document.getElementById('modalTaxAmount').innerText = isExempt ? '0' : (item.tax_amount || 0).toLocaleString();
+            document.getElementById('modalModifyReason').innerText = '해당없음';
+            document.getElementById('modalHeaderRemarks').innerText = item.remarks || '';
+
+            // 품목 일자 (월/일) 분리
+            let month = '';
+            let day = '';
+            const dateStr = item.item_date || item.issue_date;
+            if (dateStr) {
+                const parts = dateStr.split('-');
+                if (parts.length >= 3) {
+                    month = parts[1];
+                    day = parts[2];
+                } else {
+                    month = dateStr;
+                }
+            }
+            document.getElementById('modalItemMonth').innerText = month;
+            document.getElementById('modalItemDay').innerText = day;
+
+            document.getElementById('modalItemName').innerText = item.item_name || `${item.supplier_name || '공급자'} 물품/서비스 공급`;
+            document.getElementById('modalItemSpec').innerText = item.item_spec || '';
+
+            const qty = item.item_qty || 1;
+            const price = item.item_price || (item.supply_value || 0);
+
+            document.getElementById('modalItemQty').innerText = qty.toLocaleString();
+            document.getElementById('modalItemPrice').innerText = price.toLocaleString();
+            document.getElementById('modalItemSupply').innerText = (item.supply_value || 0).toLocaleString();
+            document.getElementById('modalItemTax').innerText = isExempt ? '0' : (item.tax_amount || 0).toLocaleString();
+            document.getElementById('modalItemRemarks').innerText = item.remarks || '';
+
+            // 하단 합계/영수-청구 및 결제 금액 반영
+            const claimOrReceipt = item.claim_or_receipt || '청구';
+            document.getElementById('modalTotalAmount').innerText = (item.total_amount || 0).toLocaleString();
+            document.getElementById('modalClaimOrReceipt').innerText = claimOrReceipt;
+
+            document.getElementById('modalUnpaidAmount').innerText = '';
+            document.getElementById('modalCashAmount').innerText = '';
+            document.getElementById('modalCheckAmount').innerText = '';
+            document.getElementById('modalNoteAmount').innerText = '';
+
+            document.getElementById('invoiceModal').classList.remove('hidden');
+        }
+
+        function closeInvoiceModal() {
+            document.getElementById('invoiceModal').classList.add('hidden');
+        }
+
         async function clearInvoices() {
             if (!confirm("전체 데이터를 정말 초기화하시겠습니까?")) return;
             await fetch(`${API_BASE}/invoices`, { method: 'DELETE' });
             fetchInvoices();
         }
 
-        // Init load
         fetchInvoices();
     </script>
 </body>
