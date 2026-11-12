@@ -97,10 +97,30 @@
 
         <!-- Data Table Container -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div class="p-5 border-b border-gray-200 flex justify-between items-center">
-                <input type="text" id="searchInput" oninput="fetchInvoices()" placeholder="공급자 상호 또는 사업자번호 검색..."
-                    class="w-72 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
-                <button onclick="clearInvoices()" class="text-red-600 hover:text-red-800 text-sm font-medium">전체 데이터
+            <div
+                class="p-5 border-b border-gray-200 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                <div class="flex flex-wrap items-center gap-2">
+                    <input type="text" id="searchInput" oninput="fetchInvoices()" placeholder="공급자 상호 또는 사업자번호 검색..."
+                        class="w-full sm:w-60 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
+
+                    <!-- 기간 지정 필터 -->
+                    <div
+                        class="flex flex-wrap items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5">
+                        <span class="text-xs font-semibold text-gray-600 whitespace-nowrap">작성일자</span>
+                        <input type="date" id="startDate" onchange="applyFilters()"
+                            class="border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:border-blue-500">
+                        <span class="text-gray-400 text-xs">~</span>
+                        <input type="date" id="endDate" onchange="applyFilters()"
+                            class="border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:border-blue-500">
+                        <button type="button" onclick="resetDateFilter()"
+                            class="px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 rounded transition">기간
+                            초기화</button>
+                    </div>
+                </div>
+
+                <button onclick="clearInvoices()"
+                    class="text-red-600 hover:text-red-800 text-sm font-medium self-end lg:self-auto whitespace-nowrap">전체
+                    데이터
                     초기화</button>
             </div>
 
@@ -110,7 +130,7 @@
                         <tr>
                             <th class="py-3 px-4">작성일자</th>
                             <th class="py-3 px-4">공급자 상호</th>
-                            <th class="py-3 px-4">사업자번호</th>
+                            <th class="py-3 px-4 whitespace-nowrap">사업자번호</th>
                             <th class="py-3 px-4 text-center">과세구분</th>
                             <th class="py-3 px-4 text-right">공급가액</th>
                             <th class="py-3 px-4 text-right">세액</th>
@@ -157,74 +177,116 @@
                 </div>
 
                 <!-- 공급자 / 공급받는자 인적사항 -->
-                <div class="grid grid-cols-2 gap-2 mb-2 border border-blue-600">
+                <div class="grid grid-cols-2 gap-0 mb-2 border border-blue-600">
                     <!-- 공급자 -->
-                    <table class="w-full text-left border-collapse">
+                    <table class="w-full text-left border-collapse table-fixed">
+                        <colgroup>
+                            <col style="width: 5%;">
+                            <col style="width: 22%;">
+                            <col style="width: 38%;">
+                            <col style="width: 15%;">
+                            <col style="width: 20%;">
+                        </colgroup>
                         <tr class="border-b border-blue-300">
                             <td rowspan="5"
-                                class="w-6 bg-blue-50 text-blue-800 font-bold text-center border-r border-blue-300">
+                                class="bg-blue-50 text-blue-800 font-bold text-center border-r border-blue-300 p-0">
                                 공<br>급<br>자</td>
-                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60 w-16">등록번호</td>
-                            <td class="p-1 font-mono font-bold border-r border-blue-200" id="modalSupplierBizNum"></td>
-                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60 w-16 text-center">종사업장</td>
+                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60 whitespace-nowrap">등록번호</td>
+                            <td class="p-1 font-mono font-bold border-r border-blue-200 whitespace-nowrap overflow-hidden"
+                                id="modalSupplierBizNum"></td>
+                            <td
+                                class="p-1 font-bold border-r border-blue-200 bg-blue-50/60 text-center whitespace-nowrap">
+                                종사업장</td>
                             <td class="p-1 font-mono text-center" id="modalSupplierSubNum"></td>
                         </tr>
                         <tr class="border-b border-blue-300">
-                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60">상호(법인명)</td>
-                            <td class="p-1 font-bold" id="modalSupplierName"></td>
-                            <td class="p-1 font-bold border-r border-l border-blue-200 bg-blue-50/60 text-center">성명
+                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60 whitespace-nowrap">상호(법인명)
                             </td>
-                            <td class="p-1 font-medium" id="modalSupplierCeo"></td>
+                            <td class="p-1 font-bold break-all leading-tight whitespace-normal" id="modalSupplierName">
+                            </td>
+                            <td
+                                class="p-1 font-bold border-r border-l border-blue-200 bg-blue-50/60 text-center whitespace-nowrap">
+                                성명</td>
+                            <td class="p-1 font-medium break-all leading-tight whitespace-normal" id="modalSupplierCeo">
+                            </td>
                         </tr>
                         <tr class="border-b border-blue-300">
-                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60">사업장주소</td>
-                            <td colspan="3" class="p-1 text-gray-800" id="modalSupplierAddr"></td>
+                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60 whitespace-nowrap">사업장주소
+                            </td>
+                            <td colspan="3" class="p-1 text-gray-800 break-all leading-tight whitespace-normal"
+                                id="modalSupplierAddr"></td>
                         </tr>
                         <tr class="border-b border-blue-300">
-                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60">업태</td>
-                            <td class="p-1 text-gray-800" id="modalSupplierBizType"></td>
-                            <td class="p-1 font-bold border-r border-l border-blue-200 bg-blue-50/60 text-center">종목
-                            </td>
-                            <td class="p-1 text-gray-800" id="modalSupplierBizItem"></td>
+                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60 whitespace-nowrap">업태</td>
+                            <td class="p-1 text-gray-800 break-all leading-tight whitespace-normal"
+                                id="modalSupplierBizType"></td>
+                            <td
+                                class="p-1 font-bold border-r border-l border-blue-200 bg-blue-50/60 text-center whitespace-nowrap">
+                                종목</td>
+                            <td class="p-1 text-gray-800 break-all leading-tight whitespace-normal"
+                                id="modalSupplierBizItem"></td>
                         </tr>
                         <tr>
-                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60">이메일</td>
-                            <td colspan="3" class="p-1 font-mono text-gray-800" id="modalSupplierEmail"></td>
+                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60 whitespace-nowrap">이메일</td>
+                            <td colspan="3"
+                                class="p-1 font-mono text-gray-800 break-all leading-tight whitespace-normal"
+                                id="modalSupplierEmail"></td>
                         </tr>
                     </table>
 
                     <!-- 공급받는자 -->
-                    <table class="w-full text-left border-collapse border-l border-blue-600">
+                    <table class="w-full text-left border-collapse table-fixed border-l border-blue-600">
+                        <colgroup>
+                            <col style="width: 5%;">
+                            <col style="width: 22%;">
+                            <col style="width: 38%;">
+                            <col style="width: 15%;">
+                            <col style="width: 20%;">
+                        </colgroup>
                         <tr class="border-b border-blue-300">
                             <td rowspan="5"
-                                class="w-6 bg-blue-100 text-blue-900 font-bold text-center border-r border-blue-300">
+                                class="bg-blue-100 text-blue-900 font-bold text-center border-r border-blue-300 p-0">
                                 공<br>급<br>받<br>는<br>자</td>
-                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60 w-16">등록번호</td>
-                            <td class="p-1 font-mono font-bold border-r border-blue-200" id="modalReceiverBizNum"></td>
-                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60 w-16 text-center">종사업장</td>
+                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60 whitespace-nowrap">등록번호</td>
+                            <td class="p-1 font-mono font-bold border-r border-blue-200 whitespace-nowrap overflow-hidden"
+                                id="modalReceiverBizNum"></td>
+                            <td
+                                class="p-1 font-bold border-r border-blue-200 bg-blue-50/60 text-center whitespace-nowrap">
+                                종사업장</td>
                             <td class="p-1 font-mono text-center" id="modalReceiverSubNum"></td>
                         </tr>
                         <tr class="border-b border-blue-300">
-                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60">상호(법인명)</td>
-                            <td class="p-1 font-bold" id="modalReceiverName"></td>
-                            <td class="p-1 font-bold border-r border-l border-blue-200 bg-blue-50/60 text-center">성명
+                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60 whitespace-nowrap">상호(법인명)
                             </td>
-                            <td class="p-1 font-medium" id="modalReceiverCeo"></td>
+                            <td class="p-1 font-bold break-all leading-tight whitespace-normal" id="modalReceiverName">
+                            </td>
+                            <td
+                                class="p-1 font-bold border-r border-l border-blue-200 bg-blue-50/60 text-center whitespace-nowrap">
+                                성명</td>
+                            <td class="p-1 font-medium break-all leading-tight whitespace-normal" id="modalReceiverCeo">
+                            </td>
                         </tr>
                         <tr class="border-b border-blue-300">
-                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60">사업장주소</td>
-                            <td colspan="3" class="p-1 text-gray-800" id="modalReceiverAddr"></td>
+                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60 whitespace-nowrap">사업장주소
+                            </td>
+                            <td colspan="3" class="p-1 text-gray-800 break-all leading-tight whitespace-normal"
+                                id="modalReceiverAddr"></td>
                         </tr>
                         <tr class="border-b border-blue-300">
-                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60">업태</td>
-                            <td class="p-1 text-gray-800" id="modalReceiverBizType"></td>
-                            <td class="p-1 font-bold border-r border-l border-blue-200 bg-blue-50/60 text-center">종목
-                            </td>
-                            <td class="p-1 text-gray-800" id="modalReceiverBizItem"></td>
+                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60 whitespace-nowrap">업태</td>
+                            <td class="p-1 text-gray-800 break-all leading-tight whitespace-normal"
+                                id="modalReceiverBizType"></td>
+                            <td
+                                class="p-1 font-bold border-r border-l border-blue-200 bg-blue-50/60 text-center whitespace-nowrap">
+                                종목</td>
+                            <td class="p-1 text-gray-800 break-all leading-tight whitespace-normal"
+                                id="modalReceiverBizItem"></td>
                         </tr>
                         <tr>
-                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60">이메일</td>
-                            <td colspan="3" class="p-1 font-mono text-gray-800" id="modalReceiverEmail"></td>
+                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60 whitespace-nowrap">이메일</td>
+                            <td colspan="3"
+                                class="p-1 font-mono text-gray-800 break-all leading-tight whitespace-normal"
+                                id="modalReceiverEmail"></td>
                         </tr>
                     </table>
                 </div>
@@ -252,7 +314,7 @@
                     </tr>
                 </table>
 
-                <!-- 품목 상세 테이블 -->
+                <!-- 품목 상세 테이블 (4행 구성) -->
                 <table class="w-full text-center border border-blue-600 mb-2 border-collapse">
                     <thead class="bg-blue-50 text-blue-900 font-bold border-b border-blue-300">
                         <tr>
@@ -268,7 +330,7 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-blue-200">
-                        <tr>
+                        <tr class="h-6">
                             <td class="p-1 border-r border-blue-200 font-mono" id="modalItemMonth"></td>
                             <td class="p-1 border-r border-blue-200 font-mono" id="modalItemDay"></td>
                             <td class="p-1 border-r border-blue-200 text-left pl-2 font-medium" id="modalItemName"></td>
@@ -280,6 +342,39 @@
                             <td class="p-1 border-r border-blue-200 text-right pr-2 font-mono font-semibold text-blue-800"
                                 id="modalItemTax"></td>
                             <td class="p-1 text-left pl-2 text-gray-600" id="modalItemRemarks"></td>
+                        </tr>
+                        <tr class="h-6">
+                            <td class="p-1 border-r border-blue-200"></td>
+                            <td class="p-1 border-r border-blue-200"></td>
+                            <td class="p-1 border-r border-blue-200"></td>
+                            <td class="p-1 border-r border-blue-200"></td>
+                            <td class="p-1 border-r border-blue-200"></td>
+                            <td class="p-1 border-r border-blue-200"></td>
+                            <td class="p-1 border-r border-blue-200"></td>
+                            <td class="p-1 border-r border-blue-200"></td>
+                            <td class="p-1"></td>
+                        </tr>
+                        <tr class="h-6">
+                            <td class="p-1 border-r border-blue-200"></td>
+                            <td class="p-1 border-r border-blue-200"></td>
+                            <td class="p-1 border-r border-blue-200"></td>
+                            <td class="p-1 border-r border-blue-200"></td>
+                            <td class="p-1 border-r border-blue-200"></td>
+                            <td class="p-1 border-r border-blue-200"></td>
+                            <td class="p-1 border-r border-blue-200"></td>
+                            <td class="p-1 border-r border-blue-200"></td>
+                            <td class="p-1"></td>
+                        </tr>
+                        <tr class="h-6">
+                            <td class="p-1 border-r border-blue-200"></td>
+                            <td class="p-1 border-r border-blue-200"></td>
+                            <td class="p-1 border-r border-blue-200"></td>
+                            <td class="p-1 border-r border-blue-200"></td>
+                            <td class="p-1 border-r border-blue-200"></td>
+                            <td class="p-1 border-r border-blue-200"></td>
+                            <td class="p-1 border-r border-blue-200"></td>
+                            <td class="p-1 border-r border-blue-200"></td>
+                            <td class="p-1"></td>
                         </tr>
                     </tbody>
                 </table>
@@ -318,7 +413,25 @@
 
     <script>
         const API_BASE = "http://localhost:8000/api";
+        let rawInvoiceList = [];
         let invoiceList = [];
+        let lastSummary = null;
+
+        function normalizeDateStr(dateStr) {
+            if (!dateStr) return '';
+            const cleaned = String(dateStr).trim().replace(/[\.\/]/g, '-').slice(0, 10);
+            const parts = cleaned.split('-');
+            if (parts.length === 3) {
+                return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+            }
+            return cleaned;
+        }
+
+        function resetDateFilter() {
+            document.getElementById('startDate').value = '';
+            document.getElementById('endDate').value = '';
+            applyFilters();
+        }
 
         async function uploadFile() {
             const input = document.getElementById('fileInput');
@@ -364,48 +477,79 @@
             try {
                 const res = await fetch(url);
                 const data = await res.json();
-                invoiceList = data.items;
+                rawInvoiceList = data.items || [];
+                lastSummary = data.summary || null;
 
-                document.getElementById('totalCount').innerText = `${data.summary.total_count.toLocaleString()} 건`;
-                document.getElementById('totalSupply').innerText = `${(data.summary.total_supply || 0).toLocaleString()} 원`;
-                document.getElementById('totalTax').innerText = `${(data.summary.total_tax || 0).toLocaleString()} 원`;
-                document.getElementById('totalAmount').innerText = `${(data.summary.total_amount || 0).toLocaleString()} 원`;
-
-                const tbody = document.getElementById('invoiceTableBody');
-                tbody.innerHTML = "";
-
-                if (data.items.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-gray-400">등록된 세금계산서 데이터가 없습니다.</td></tr>`;
-                    return;
-                }
-
-                data.items.forEach((item, index) => {
-                    const taxBadge = item.is_tax_exempt
-                        ? `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">면세</span>`
-                        : `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-700 border border-gray-200">과세</span>`;
-
-                    const row = `
-                        <tr class="hover:bg-gray-50 transition">
-                            <td class="py-3 px-4 font-medium text-gray-900">${item.issue_date || ''}</td>
-                            <td class="py-3 px-4 font-semibold">${item.supplier_name || ''}</td>
-                            <td class="py-3 px-4 text-gray-500">${item.supplier_biz_num || ''}</td>
-                            <td class="py-3 px-4 text-center">${taxBadge}</td>
-                            <td class="py-3 px-4 text-right font-medium text-blue-700">${(item.supply_value || 0).toLocaleString()} 원</td>
-                            <td class="py-3 px-4 text-right text-emerald-700">${(item.tax_amount || 0).toLocaleString()} 원</td>
-                            <td class="py-3 px-4 text-right font-bold text-gray-900">${(item.total_amount || 0).toLocaleString()} 원</td>
-                            <td class="py-3 px-4 text-xs font-mono text-gray-400">${item.approval_num || ''}</td>
-                            <td class="py-3 px-4 text-center">
-                                <button onclick="openInvoiceModal(${index})" class="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-medium px-3 py-1 rounded text-xs transition">
-                                    🖨️ 출력
-                                </button>
-                            </td>
-                        </tr>
-                    `;
-                    tbody.innerHTML += row;
-                });
+                applyFilters();
             } catch (err) {
                 console.error("데이터 조회 실패:", err);
             }
+        }
+
+        function applyFilters() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+
+            const filteredItems = rawInvoiceList.filter(item => {
+                const itemDate = normalizeDateStr(item.issue_date);
+                if (startDate && (!itemDate || itemDate < startDate)) return false;
+                if (endDate && (!itemDate || itemDate > endDate)) return false;
+                return true;
+            });
+
+            invoiceList = filteredItems;
+
+            if (!startDate && !endDate && lastSummary) {
+                document.getElementById('totalCount').innerText = `${(lastSummary.total_count ?? filteredItems.length).toLocaleString()} 건`;
+                document.getElementById('totalSupply').innerText = `${(lastSummary.total_supply || 0).toLocaleString()} 원`;
+                document.getElementById('totalTax').innerText = `${(lastSummary.total_tax || 0).toLocaleString()} 원`;
+                document.getElementById('totalAmount').innerText = `${(lastSummary.total_amount || 0).toLocaleString()} 원`;
+            } else {
+                const sumSupply = filteredItems.reduce((acc, cur) => acc + (Number(cur.supply_value) || 0), 0);
+                const sumTax = filteredItems.reduce((acc, cur) => acc + (Number(cur.tax_amount) || 0), 0);
+                const sumTotal = filteredItems.reduce((acc, cur) => acc + (Number(cur.total_amount) || 0), 0);
+
+                document.getElementById('totalCount').innerText = `${filteredItems.length.toLocaleString()} 건`;
+                document.getElementById('totalSupply').innerText = `${sumSupply.toLocaleString()} 원`;
+                document.getElementById('totalTax').innerText = `${sumTax.toLocaleString()} 원`;
+                document.getElementById('totalAmount').innerText = `${sumTotal.toLocaleString()} 원`;
+            }
+
+            const tbody = document.getElementById('invoiceTableBody');
+            tbody.innerHTML = "";
+
+            if (filteredItems.length === 0) {
+                const emptyMsg = rawInvoiceList.length === 0
+                    ? "등록된 세금계산서 데이터가 없습니다."
+                    : "선택한 기간에 해당하는 세금계산서가 없습니다.";
+                tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-gray-400">${emptyMsg}</td></tr>`;
+                return;
+            }
+
+            filteredItems.forEach((item, index) => {
+                const taxBadge = item.is_tax_exempt
+                    ? `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">면세</span>`
+                    : `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-700 border border-gray-200">과세</span>`;
+
+                const row = `
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="py-3 px-4 font-medium text-gray-900 whitespace-nowrap">${item.issue_date || ''}</td>
+                        <td class="py-3 px-4 font-semibold">${item.supplier_name || ''}</td>
+                        <td class="py-3 px-4 text-gray-500 whitespace-nowrap">${item.supplier_biz_num || ''}</td>
+                        <td class="py-3 px-4 text-center">${taxBadge}</td>
+                        <td class="py-3 px-4 text-right font-medium text-blue-700">${(item.supply_value || 0).toLocaleString()} 원</td>
+                        <td class="py-3 px-4 text-right text-emerald-700">${(item.tax_amount || 0).toLocaleString()} 원</td>
+                        <td class="py-3 px-4 text-right font-bold text-gray-900">${(item.total_amount || 0).toLocaleString()} 원</td>
+                        <td class="py-3 px-4 text-xs font-mono text-gray-400">${item.approval_num || ''}</td>
+                        <td class="py-3 px-4 text-center">
+                            <button onclick="openInvoiceModal(${index})" class="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-medium px-3 py-1 rounded text-xs transition">
+                                🖨️ 출력
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
         }
 
         function openInvoiceModal(index) {
