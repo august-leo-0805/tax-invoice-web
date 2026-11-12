@@ -7,7 +7,45 @@
     <title>전자세금계산서 관리 대시보드</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        .invoice-outer {
+            border: 2px solid #1e3a8a;
+            background-color: #ffffff;
+        }
+
+        .invoice-divider-b {
+            border-bottom: 2px solid #1e3a8a;
+        }
+
+        .invoice-divider-r {
+            border-right: 2px solid #1e3a8a;
+        }
+
+        .supplier-label {
+            background-color: #fde8e8;
+            color: #b91c1c;
+            border-color: #dc2626;
+        }
+
+        .supplier-cell {
+            border-color: #dc2626;
+        }
+
+        .receiver-label {
+            background-color: #e8f0fe;
+            color: #1e40af;
+            border-color: #2563eb;
+        }
+
+        .receiver-cell {
+            border-color: #2563eb;
+        }
+
         @media print {
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
             body>* {
                 display: none !important;
             }
@@ -25,6 +63,15 @@
                 overflow: visible !important;
             }
 
+            #invoiceModal>div {
+                max-width: 100% !important;
+                width: 100% !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                box-shadow: none !important;
+                border-radius: 0 !important;
+            }
+
             #printableInvoice,
             #printableInvoice * {
                 visibility: visible !important;
@@ -34,10 +81,10 @@
                 position: relative !important;
                 width: 100% !important;
                 margin: 0 !important;
-                padding: 15px !important;
+                padding: 10px !important;
                 box-shadow: none !important;
                 background-color: white !important;
-                border: 2px solid #2563eb !important;
+                border: none !important;
             }
 
             .no-print {
@@ -79,19 +126,19 @@
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
             <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
                 <span class="text-gray-500 text-sm font-medium">총 건수</span>
-                <p id="totalCount" class="text-2xl font-bold text-gray-900 mt-1">0 건</p>
+                <p id="totalCount" class="text-2xl font-bold text-gray-900 mt-1 whitespace-nowrap">0 건</p>
             </div>
             <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
                 <span class="text-gray-500 text-sm font-medium">총 공급가액</span>
-                <p id="totalSupply" class="text-2xl font-bold text-blue-600 mt-1">0 원</p>
+                <p id="totalSupply" class="text-2xl font-bold text-blue-600 mt-1 whitespace-nowrap">0 원</p>
             </div>
             <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
                 <span class="text-gray-500 text-sm font-medium">총 세액</span>
-                <p id="totalTax" class="text-2xl font-bold text-emerald-600 mt-1">0 원</p>
+                <p id="totalTax" class="text-2xl font-bold text-emerald-600 mt-1 whitespace-nowrap">0 원</p>
             </div>
             <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
                 <span class="text-gray-500 text-sm font-medium">총 합계금액</span>
-                <p id="totalAmount" class="text-2xl font-bold text-indigo-600 mt-1">0 원</p>
+                <p id="totalAmount" class="text-2xl font-bold text-indigo-600 mt-1 whitespace-nowrap">0 원</p>
             </div>
         </div>
 
@@ -100,7 +147,7 @@
             <div
                 class="p-5 border-b border-gray-200 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
                 <div class="flex flex-wrap items-center gap-2">
-                    <input type="text" id="searchInput" oninput="fetchInvoices()" placeholder="공급자 상호 또는 사업자번호 검색..."
+                    <input type="text" id="searchInput" oninput="fetchInvoices()" placeholder="공급자 상호 검색..."
                         class="w-full sm:w-60 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
 
                     <!-- 기간 지정 필터 -->
@@ -113,30 +160,27 @@
                         <input type="date" id="endDate" onchange="applyFilters()"
                             class="border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:border-blue-500">
                         <button type="button" onclick="resetDateFilter()"
-                            class="px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 rounded transition">기간
+                            class="px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 rounded transition whitespace-nowrap">기간
                             초기화</button>
                     </div>
                 </div>
 
                 <button onclick="clearInvoices()"
                     class="text-red-600 hover:text-red-800 text-sm font-medium self-end lg:self-auto whitespace-nowrap">전체
-                    데이터
-                    초기화</button>
+                    데이터 초기화</button>
             </div>
 
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm text-gray-600">
                     <thead class="bg-gray-50 text-gray-700 uppercase font-semibold text-xs border-b border-gray-200">
                         <tr>
-                            <th class="py-3 px-4">작성일자</th>
-                            <th class="py-3 px-4">공급자 상호</th>
-                            <th class="py-3 px-4 whitespace-nowrap">사업자번호</th>
-                            <th class="py-3 px-4 text-center">과세구분</th>
-                            <th class="py-3 px-4 text-right">공급가액</th>
-                            <th class="py-3 px-4 text-right">세액</th>
-                            <th class="py-3 px-4 text-right">합계금액</th>
-                            <th class="py-3 px-4">승인번호</th>
-                            <th class="py-3 px-4 text-center">출력</th>
+                            <th class="py-3 px-4 whitespace-nowrap">작성일자</th>
+                            <th class="py-3 px-4 whitespace-nowrap">공급자 상호</th>
+                            <th class="py-3 px-4 text-center whitespace-nowrap">과세구분</th>
+                            <th class="py-3 px-4 text-right whitespace-nowrap">공급가액</th>
+                            <th class="py-3 px-4 text-right whitespace-nowrap">세액</th>
+                            <th class="py-3 px-4 text-right whitespace-nowrap">합계금액</th>
+                            <th class="py-3 px-4 text-center whitespace-nowrap">출력</th>
                         </tr>
                     </thead>
                     <tbody id="invoiceTableBody" class="divide-y divide-gray-100">
@@ -162,250 +206,312 @@
                 </div>
             </div>
 
-            <!-- 홈택스 파란색 공급받는자 보관용 양식 -->
-            <div id="printableInvoice" class="border-2 border-blue-600 p-4 text-xs font-sans text-gray-900 bg-white">
-                <!-- 상단 타이틀 & 승인번호 -->
-                <div class="flex justify-between items-center border-b-2 border-blue-600 pb-2 mb-2">
-                    <div class="text-2xl font-bold text-blue-600 tracking-widest" id="modalInvoiceTitle">전자세금계산서</div>
-                    <div class="text-right">
-                        <span
-                            class="text-blue-700 font-bold border border-blue-600 px-1.5 py-0.5 rounded text-xs bg-blue-50">공급받는자
-                            보관용</span>
-                        <div class="text-xs text-gray-700 mt-1 font-mono">승인번호: <span id="modalApprovalNum"
-                                class="font-bold text-gray-900"></span></div>
+            <!-- 국세청 표준 전자세금계산서 양식 -->
+            <div id="printableInvoice" class="bg-white text-gray-900 font-sans text-xs">
+                <div class="invoice-outer">
+                    <!-- 1. 상단 타이틀 & 승인번호 -->
+                    <div class="grid grid-cols-2 invoice-divider-b">
+                        <div class="invoice-divider-r flex items-center justify-center py-2.5 px-2">
+                            <span id="modalInvoiceTitle"
+                                class="text-2xl font-bold text-gray-900 tracking-[0.2em]">전자세금계산서</span>
+                        </div>
+                        <div class="flex items-stretch">
+                            <div
+                                class="w-1/4 border-r border-blue-600 flex items-center justify-center font-semibold text-gray-800 py-2">
+                                승인번호
+                            </div>
+                            <div class="w-3/4 flex items-center justify-center font-mono text-xs font-semibold text-gray-900 px-2 py-2"
+                                id="modalApprovalNum"></div>
+                        </div>
                     </div>
-                </div>
 
-                <!-- 공급자 / 공급받는자 인적사항 -->
-                <div class="grid grid-cols-2 gap-0 mb-2 border border-blue-600">
-                    <!-- 공급자 -->
-                    <table class="w-full text-left border-collapse table-fixed">
+                    <!-- 2. 공급자(적색) / 공급받는자(청색) 인적사항 -->
+                    <div class="grid grid-cols-2 invoice-divider-b">
+                        <!-- 공급자 (좌측: 적색) -->
+                        <table class="w-full text-center border-collapse table-fixed invoice-divider-r">
+                            <colgroup>
+                                <col style="width: 7%;">
+                                <col style="width: 18%;">
+                                <col style="width: 35%;">
+                                <col style="width: 18%;">
+                                <col style="width: 22%;">
+                            </colgroup>
+                            <tr class="border-b supplier-cell">
+                                <td rowspan="6"
+                                    class="supplier-label font-bold text-center border-r leading-relaxed py-2">
+                                    공<br><br>급<br><br>자
+                                </td>
+                                <td class="supplier-label font-medium border-r py-1 px-0.5 leading-tight">
+                                    등록<br>번호
+                                </td>
+                                <td class="supplier-cell border-r p-1 font-mono font-bold text-gray-900 text-left pl-2 whitespace-nowrap overflow-hidden"
+                                    id="modalSupplierBizNum"></td>
+                                <td class="supplier-label font-medium border-r py-1 px-0.5 leading-tight">
+                                    종사업장<br>번호
+                                </td>
+                                <td class="p-1 font-mono text-gray-900" id="modalSupplierSubNum"></td>
+                            </tr>
+                            <tr class="border-b supplier-cell">
+                                <td class="supplier-label font-medium border-r py-1 px-0.5 leading-tight">
+                                    상호<br>(법인명)
+                                </td>
+                                <td class="supplier-cell border-r p-1 font-bold text-gray-900 text-left pl-2 break-all leading-tight"
+                                    id="modalSupplierName"></td>
+                                <td class="supplier-label font-medium border-r py-1 px-0.5">
+                                    성명
+                                </td>
+                                <td class="p-1 font-medium text-gray-900 break-all leading-tight" id="modalSupplierCeo">
+                                </td>
+                            </tr>
+                            <tr class="border-b supplier-cell">
+                                <td class="supplier-label font-medium border-r py-1 px-0.5 leading-tight">
+                                    사업장<br>주소
+                                </td>
+                                <td colspan="3" class="p-1 text-gray-800 text-left pl-2 break-all leading-tight"
+                                    id="modalSupplierAddr"></td>
+                            </tr>
+                            <tr class="border-b supplier-cell">
+                                <td class="supplier-label font-medium border-r py-1.5 px-0.5">
+                                    업태
+                                </td>
+                                <td class="supplier-cell border-r p-1 text-gray-800 text-left pl-2 break-all leading-tight"
+                                    id="modalSupplierBizType"></td>
+                                <td class="supplier-label font-medium border-r py-1.5 px-0.5">
+                                    종목
+                                </td>
+                                <td class="p-1 text-gray-800 text-left pl-2 break-all leading-tight"
+                                    id="modalSupplierBizItem"></td>
+                            </tr>
+                            <tr>
+                                <td rowspan="2" class="supplier-label font-medium border-r py-2 px-0.5">
+                                    이메일
+                                </td>
+                                <td rowspan="2" colspan="3"
+                                    class="p-1 font-mono text-gray-800 text-left pl-2 break-all leading-tight"
+                                    id="modalSupplierEmail"></td>
+                            </tr>
+                            <tr></tr>
+                        </table>
+
+                        <!-- 공급받는자 (우측: 청색) -->
+                        <table class="w-full text-center border-collapse table-fixed">
+                            <colgroup>
+                                <col style="width: 7%;">
+                                <col style="width: 18%;">
+                                <col style="width: 35%;">
+                                <col style="width: 18%;">
+                                <col style="width: 22%;">
+                            </colgroup>
+                            <tr class="border-b receiver-cell">
+                                <td rowspan="6" class="receiver-label font-bold text-center border-r leading-snug py-2">
+                                    공<br>급<br>받<br>는<br>자
+                                </td>
+                                <td class="receiver-label font-medium border-r py-1 px-0.5 leading-tight">
+                                    등록<br>번호
+                                </td>
+                                <td class="receiver-cell border-r p-1 font-mono font-bold text-gray-900 text-left pl-2 whitespace-nowrap overflow-hidden"
+                                    id="modalReceiverBizNum"></td>
+                                <td class="receiver-label font-medium border-r py-1 px-0.5 leading-tight">
+                                    종사업장<br>번호
+                                </td>
+                                <td class="p-1 font-mono text-gray-900" id="modalReceiverSubNum"></td>
+                            </tr>
+                            <tr class="border-b receiver-cell">
+                                <td class="receiver-label font-medium border-r py-1 px-0.5 leading-tight">
+                                    상호<br>(법인명)
+                                </td>
+                                <td class="receiver-cell border-r p-1 font-bold text-gray-900 text-left pl-2 break-all leading-tight"
+                                    id="modalReceiverName"></td>
+                                <td class="receiver-label font-medium border-r py-1 px-0.5">
+                                    성명
+                                </td>
+                                <td class="p-1 font-medium text-gray-900 break-all leading-tight" id="modalReceiverCeo">
+                                </td>
+                            </tr>
+                            <tr class="border-b receiver-cell">
+                                <td class="receiver-label font-medium border-r py-1 px-0.5 leading-tight">
+                                    사업장<br>주소
+                                </td>
+                                <td colspan="3" class="p-1 text-gray-800 text-left pl-2 break-all leading-tight"
+                                    id="modalReceiverAddr"></td>
+                            </tr>
+                            <tr class="border-b receiver-cell">
+                                <td class="receiver-label font-medium border-r py-1.5 px-0.5">
+                                    업태
+                                </td>
+                                <td class="receiver-cell border-r p-1 text-gray-800 text-left pl-2 break-all leading-tight"
+                                    id="modalReceiverBizType"></td>
+                                <td class="receiver-label font-medium border-r py-1.5 px-0.5">
+                                    종목
+                                </td>
+                                <td class="p-1 text-gray-800 text-left pl-2 break-all leading-tight"
+                                    id="modalReceiverBizItem"></td>
+                            </tr>
+                            <tr class="border-b receiver-cell">
+                                <td class="receiver-label font-medium border-r py-1 px-0.5">
+                                    이메일
+                                </td>
+                                <td colspan="3"
+                                    class="p-1 font-mono text-gray-800 text-left pl-2 break-all leading-tight h-6"
+                                    id="modalReceiverEmail"></td>
+                            </tr>
+                            <tr>
+                                <td class="receiver-label font-medium border-r py-1 px-0.5">
+                                    이메일
+                                </td>
+                                <td colspan="3"
+                                    class="p-1 font-mono text-gray-800 text-left pl-2 break-all leading-tight h-6"
+                                    id="modalReceiverEmail2"></td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <!-- 3. 작성일자(15%) / 공급가액(25%) / 세액(25%) / 수정사유(35%) 및 비고 -->
+                    <table class="w-full text-center border-collapse table-fixed invoice-divider-b">
                         <colgroup>
-                            <col style="width: 5%;">
-                            <col style="width: 22%;">
-                            <col style="width: 38%;">
                             <col style="width: 15%;">
-                            <col style="width: 20%;">
+                            <col style="width: 25%;">
+                            <col style="width: 25%;">
+                            <col style="width: 35%;">
                         </colgroup>
-                        <tr class="border-b border-blue-300">
-                            <td rowspan="5"
-                                class="bg-blue-50 text-blue-800 font-bold text-center border-r border-blue-300 p-0">
-                                공<br>급<br>자</td>
-                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60 whitespace-nowrap">등록번호</td>
-                            <td class="p-1 font-mono font-bold border-r border-blue-200 whitespace-nowrap overflow-hidden"
-                                id="modalSupplierBizNum"></td>
-                            <td
-                                class="p-1 font-bold border-r border-blue-200 bg-blue-50/60 text-center whitespace-nowrap">
-                                종사업장</td>
-                            <td class="p-1 font-mono text-center" id="modalSupplierSubNum"></td>
+                        <tr class="h-8 border-b border-blue-400 font-semibold text-gray-800">
+                            <td class="py-1.5 px-2 border-r border-blue-400">작성일자</td>
+                            <td id="modalSummarySupplyHeader" class="py-1.5 px-2 invoice-divider-r">공급가액</td>
+                            <td id="modalSummaryTaxHeader" class="py-1.5 px-2 border-r border-blue-400">세액</td>
+                            <td class="py-1.5 px-2">수정사유</td>
                         </tr>
-                        <tr class="border-b border-blue-300">
-                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60 whitespace-nowrap">상호(법인명)
-                            </td>
-                            <td class="p-1 font-bold break-all leading-tight whitespace-normal" id="modalSupplierName">
-                            </td>
-                            <td
-                                class="p-1 font-bold border-r border-l border-blue-200 bg-blue-50/60 text-center whitespace-nowrap">
-                                성명</td>
-                            <td class="p-1 font-medium break-all leading-tight whitespace-normal" id="modalSupplierCeo">
-                            </td>
+                        <tr class="h-8 font-bold text-gray-900 border-b border-blue-400">
+                            <td class="py-1.5 px-2 border-r border-blue-400 font-mono" id="modalIssueDate"></td>
+                            <td class="py-1.5 px-2 invoice-divider-r text-right pr-3 font-mono text-sm"
+                                id="modalSupplyValue"></td>
+                            <td class="py-1.5 px-2 border-r border-blue-400 text-right pr-3 font-mono text-sm"
+                                id="modalTaxAmount"></td>
+                            <td class="py-1.5 px-2 text-xs font-normal text-gray-700" id="modalModifyReason"></td>
                         </tr>
-                        <tr class="border-b border-blue-300">
-                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60 whitespace-nowrap">사업장주소
+                        <tr class="h-8">
+                            <td class="py-1.5 px-2 border-r border-blue-400 font-semibold text-gray-800 text-center">비고
                             </td>
-                            <td colspan="3" class="p-1 text-gray-800 break-all leading-tight whitespace-normal"
-                                id="modalSupplierAddr"></td>
-                        </tr>
-                        <tr class="border-b border-blue-300">
-                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60 whitespace-nowrap">업태</td>
-                            <td class="p-1 text-gray-800 break-all leading-tight whitespace-normal"
-                                id="modalSupplierBizType"></td>
-                            <td
-                                class="p-1 font-bold border-r border-l border-blue-200 bg-blue-50/60 text-center whitespace-nowrap">
-                                종목</td>
-                            <td class="p-1 text-gray-800 break-all leading-tight whitespace-normal"
-                                id="modalSupplierBizItem"></td>
-                        </tr>
-                        <tr>
-                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60 whitespace-nowrap">이메일</td>
                             <td colspan="3"
-                                class="p-1 font-mono text-gray-800 break-all leading-tight whitespace-normal"
-                                id="modalSupplierEmail"></td>
+                                class="py-1.5 px-2 text-xs font-normal text-gray-800 text-left pl-3 break-all"
+                                id="modalHeaderRemarks"></td>
                         </tr>
                     </table>
 
-                    <!-- 공급받는자 -->
-                    <table class="w-full text-left border-collapse table-fixed border-l border-blue-600">
+                    <!-- 4. 품목 상세 테이블 (4행 구성) -->
+                    <table class="w-full text-center border-collapse table-fixed invoice-divider-b">
                         <colgroup>
-                            <col style="width: 5%;">
-                            <col style="width: 22%;">
-                            <col style="width: 38%;">
-                            <col style="width: 15%;">
-                            <col style="width: 20%;">
+                            <col style="width: 4.5%;">
+                            <col style="width: 4.5%;">
+                            <col style="width: 24%;">
+                            <col style="width: 8%;">
+                            <col style="width: 9%;">
+                            <col style="width: 12%;">
+                            <col style="width: 14%;">
+                            <col style="width: 12%;">
+                            <col style="width: 12%;">
                         </colgroup>
-                        <tr class="border-b border-blue-300">
-                            <td rowspan="5"
-                                class="bg-blue-100 text-blue-900 font-bold text-center border-r border-blue-300 p-0">
-                                공<br>급<br>받<br>는<br>자</td>
-                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60 whitespace-nowrap">등록번호</td>
-                            <td class="p-1 font-mono font-bold border-r border-blue-200 whitespace-nowrap overflow-hidden"
-                                id="modalReceiverBizNum"></td>
-                            <td
-                                class="p-1 font-bold border-r border-blue-200 bg-blue-50/60 text-center whitespace-nowrap">
-                                종사업장</td>
-                            <td class="p-1 font-mono text-center" id="modalReceiverSubNum"></td>
-                        </tr>
-                        <tr class="border-b border-blue-300">
-                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60 whitespace-nowrap">상호(법인명)
+                        <thead>
+                            <tr class="border-b border-blue-400 font-semibold text-gray-800">
+                                <th class="py-1.5 border-r border-blue-400 font-semibold">월</th>
+                                <th class="py-1.5 border-r border-blue-400 font-semibold">일</th>
+                                <th class="py-1.5 border-r border-blue-400 font-semibold">품목</th>
+                                <th class="py-1.5 border-r border-blue-400 font-semibold">규격</th>
+                                <th class="py-1.5 border-r border-blue-400 font-semibold">수량</th>
+                                <th class="py-1.5 border-r border-blue-400 font-semibold">단가</th>
+                                <th id="modalItemSupplyHeader" class="py-1.5 border-r border-blue-400 font-semibold">
+                                    공급가액</th>
+                                <th id="modalItemTaxHeader" class="py-1.5 border-r border-blue-400 font-semibold">세액
+                                </th>
+                                <th class="py-1.5 font-semibold">비고</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-blue-300">
+                            <tr class="h-7">
+                                <td class="p-1 border-r border-blue-300 font-mono" id="modalItemMonth"></td>
+                                <td class="p-1 border-r border-blue-300 font-mono" id="modalItemDay"></td>
+                                <td class="p-1 border-r border-blue-300 text-left pl-2 font-medium text-gray-900"
+                                    id="modalItemName"></td>
+                                <td class="p-1 border-r border-blue-300" id="modalItemSpec"></td>
+                                <td class="p-1 border-r border-blue-300 font-mono" id="modalItemQty"></td>
+                                <td class="p-1 border-r border-blue-300 text-right pr-2 font-mono" id="modalItemPrice">
+                                </td>
+                                <td class="item-supply-cell p-1 border-r border-blue-300 text-right pr-2 font-mono font-semibold text-gray-900"
+                                    id="modalItemSupply"></td>
+                                <td class="item-tax-cell p-1 border-r border-blue-300 text-right pr-2 font-mono font-semibold text-gray-900"
+                                    id="modalItemTax"></td>
+                                <td class="px-1.5 py-1 text-left text-[11px] leading-tight text-gray-700 break-all"
+                                    id="modalItemRemarks"></td>
+                            </tr>
+                            <tr class="h-7">
+                                <td class="p-1 border-r border-blue-300"></td>
+                                <td class="p-1 border-r border-blue-300"></td>
+                                <td class="p-1 border-r border-blue-300"></td>
+                                <td class="p-1 border-r border-blue-300"></td>
+                                <td class="p-1 border-r border-blue-300"></td>
+                                <td class="p-1 border-r border-blue-300"></td>
+                                <td class="item-supply-cell p-1 border-r border-blue-300"></td>
+                                <td class="item-tax-cell p-1 border-r border-blue-300"></td>
+                                <td class="p-1"></td>
+                            </tr>
+                            <tr class="h-7">
+                                <td class="p-1 border-r border-blue-300"></td>
+                                <td class="p-1 border-r border-blue-300"></td>
+                                <td class="p-1 border-r border-blue-300"></td>
+                                <td class="p-1 border-r border-blue-300"></td>
+                                <td class="p-1 border-r border-blue-300"></td>
+                                <td class="p-1 border-r border-blue-300"></td>
+                                <td class="item-supply-cell p-1 border-r border-blue-300"></td>
+                                <td class="item-tax-cell p-1 border-r border-blue-300"></td>
+                                <td class="p-1"></td>
+                            </tr>
+                            <tr class="h-7">
+                                <td class="p-1 border-r border-blue-300"></td>
+                                <td class="p-1 border-r border-blue-300"></td>
+                                <td class="p-1 border-r border-blue-300"></td>
+                                <td class="p-1 border-r border-blue-300"></td>
+                                <td class="p-1 border-r border-blue-300"></td>
+                                <td class="p-1 border-r border-blue-300"></td>
+                                <td class="item-supply-cell p-1 border-r border-blue-300"></td>
+                                <td class="item-tax-cell p-1 border-r border-blue-300"></td>
+                                <td class="p-1"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- 5. 합계금액 및 영수/청구 구분 -->
+                    <table class="w-full text-center border-collapse table-fixed">
+                        <colgroup>
+                            <col style="width: 14.5%;">
+                            <col style="width: 14.5%;">
+                            <col style="width: 14.5%;">
+                            <col style="width: 14.5%;">
+                            <col style="width: 14.5%;">
+                            <col style="width: 27.5%;">
+                        </colgroup>
+                        <tr class="border-b border-blue-400 font-semibold text-gray-800">
+                            <td class="py-1.5 border-r border-blue-400">합계금액</td>
+                            <td class="py-1.5 border-r border-blue-400">현금</td>
+                            <td class="py-1.5 border-r border-blue-400">수표</td>
+                            <td class="py-1.5 border-r border-blue-400">어음</td>
+                            <td class="py-1.5 border-r border-blue-400">외상미수금</td>
+                            <td rowspan="2" class="p-2 align-middle font-sans text-xs text-gray-900">
+                                이 금액을 (<span id="modalClaimOrReceipt" class="font-bold text-gray-900 px-1">청구</span>)함
                             </td>
-                            <td class="p-1 font-bold break-all leading-tight whitespace-normal" id="modalReceiverName">
-                            </td>
-                            <td
-                                class="p-1 font-bold border-r border-l border-blue-200 bg-blue-50/60 text-center whitespace-nowrap">
-                                성명</td>
-                            <td class="p-1 font-medium break-all leading-tight whitespace-normal" id="modalReceiverCeo">
-                            </td>
                         </tr>
-                        <tr class="border-b border-blue-300">
-                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60 whitespace-nowrap">사업장주소
-                            </td>
-                            <td colspan="3" class="p-1 text-gray-800 break-all leading-tight whitespace-normal"
-                                id="modalReceiverAddr"></td>
-                        </tr>
-                        <tr class="border-b border-blue-300">
-                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60 whitespace-nowrap">업태</td>
-                            <td class="p-1 text-gray-800 break-all leading-tight whitespace-normal"
-                                id="modalReceiverBizType"></td>
-                            <td
-                                class="p-1 font-bold border-r border-l border-blue-200 bg-blue-50/60 text-center whitespace-nowrap">
-                                종목</td>
-                            <td class="p-1 text-gray-800 break-all leading-tight whitespace-normal"
-                                id="modalReceiverBizItem"></td>
-                        </tr>
-                        <tr>
-                            <td class="p-1 font-bold border-r border-blue-200 bg-blue-50/60 whitespace-nowrap">이메일</td>
-                            <td colspan="3"
-                                class="p-1 font-mono text-gray-800 break-all leading-tight whitespace-normal"
-                                id="modalReceiverEmail"></td>
+                        <tr class="h-8 font-mono font-bold text-gray-900">
+                            <td class="p-1.5 border-r border-blue-400 text-sm" id="modalTotalAmount"></td>
+                            <td class="p-1.5 border-r border-blue-400" id="modalCashAmount"></td>
+                            <td class="p-1.5 border-r border-blue-400" id="modalCheckAmount"></td>
+                            <td class="p-1.5 border-r border-blue-400" id="modalNoteAmount"></td>
+                            <td class="p-1.5 border-r border-blue-400" id="modalUnpaidAmount"></td>
                         </tr>
                     </table>
                 </div>
 
-                <!-- 두 번째 표 -->
-                <table class="w-full text-center border border-blue-600 mb-2 border-collapse">
-                    <tr class="bg-blue-50 text-blue-900 font-bold border-b border-blue-300">
-                        <td class="p-1 border-r border-blue-300 w-1/4">작성일자</td>
-                        <td class="p-1 border-r border-blue-300 w-1/4">공급가액</td>
-                        <td class="p-1 border-r border-blue-300 w-1/4">세액</td>
-                        <td class="p-1 w-1/4">수정사유</td>
-                    </tr>
-                    <tr class="font-bold text-sm border-b border-blue-300">
-                        <td class="p-1.5 border-r border-blue-300 font-mono" id="modalIssueDate"></td>
-                        <td class="p-1.5 border-r border-blue-300 text-right pr-3 font-mono text-blue-800"
-                            id="modalSupplyValue"></td>
-                        <td class="p-1.5 border-r border-blue-300 text-right pr-3 font-mono text-blue-700"
-                            id="modalTaxAmount"></td>
-                        <td class="p-1 text-xs font-normal text-gray-600" id="modalModifyReason">해당없음</td>
-                    </tr>
-                    <tr>
-                        <td class="bg-blue-50 text-blue-900 font-bold p-1 border-r border-blue-300 text-center">비고</td>
-                        <td colspan="3" class="p-1.5 text-xs font-normal text-gray-800 text-left pl-3"
-                            id="modalHeaderRemarks"></td>
-                    </tr>
-                </table>
-
-                <!-- 품목 상세 테이블 (4행 구성) -->
-                <table class="w-full text-center border border-blue-600 mb-2 border-collapse">
-                    <thead class="bg-blue-50 text-blue-900 font-bold border-b border-blue-300">
-                        <tr>
-                            <th class="p-1 border-r border-blue-300 w-8">월</th>
-                            <th class="p-1 border-r border-blue-300 w-8">일</th>
-                            <th class="p-1 border-r border-blue-300">품목</th>
-                            <th class="p-1 border-r border-blue-300 w-16">규격</th>
-                            <th class="p-1 border-r border-blue-300 w-12">수량</th>
-                            <th class="p-1 border-r border-blue-300 w-20">단가</th>
-                            <th class="p-1 border-r border-blue-300 w-28">공급가액</th>
-                            <th class="p-1 border-r border-blue-300 w-24">세액</th>
-                            <th class="p-1 w-24">비고</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-blue-200">
-                        <tr class="h-6">
-                            <td class="p-1 border-r border-blue-200 font-mono" id="modalItemMonth"></td>
-                            <td class="p-1 border-r border-blue-200 font-mono" id="modalItemDay"></td>
-                            <td class="p-1 border-r border-blue-200 text-left pl-2 font-medium" id="modalItemName"></td>
-                            <td class="p-1 border-r border-blue-200" id="modalItemSpec"></td>
-                            <td class="p-1 border-r border-blue-200 font-mono" id="modalItemQty"></td>
-                            <td class="p-1 border-r border-blue-200 text-right pr-2 font-mono" id="modalItemPrice"></td>
-                            <td class="p-1 border-r border-blue-200 text-right pr-2 font-mono font-semibold text-blue-900"
-                                id="modalItemSupply"></td>
-                            <td class="p-1 border-r border-blue-200 text-right pr-2 font-mono font-semibold text-blue-800"
-                                id="modalItemTax"></td>
-                            <td class="p-1 text-left pl-2 text-gray-600" id="modalItemRemarks"></td>
-                        </tr>
-                        <tr class="h-6">
-                            <td class="p-1 border-r border-blue-200"></td>
-                            <td class="p-1 border-r border-blue-200"></td>
-                            <td class="p-1 border-r border-blue-200"></td>
-                            <td class="p-1 border-r border-blue-200"></td>
-                            <td class="p-1 border-r border-blue-200"></td>
-                            <td class="p-1 border-r border-blue-200"></td>
-                            <td class="p-1 border-r border-blue-200"></td>
-                            <td class="p-1 border-r border-blue-200"></td>
-                            <td class="p-1"></td>
-                        </tr>
-                        <tr class="h-6">
-                            <td class="p-1 border-r border-blue-200"></td>
-                            <td class="p-1 border-r border-blue-200"></td>
-                            <td class="p-1 border-r border-blue-200"></td>
-                            <td class="p-1 border-r border-blue-200"></td>
-                            <td class="p-1 border-r border-blue-200"></td>
-                            <td class="p-1 border-r border-blue-200"></td>
-                            <td class="p-1 border-r border-blue-200"></td>
-                            <td class="p-1 border-r border-blue-200"></td>
-                            <td class="p-1"></td>
-                        </tr>
-                        <tr class="h-6">
-                            <td class="p-1 border-r border-blue-200"></td>
-                            <td class="p-1 border-r border-blue-200"></td>
-                            <td class="p-1 border-r border-blue-200"></td>
-                            <td class="p-1 border-r border-blue-200"></td>
-                            <td class="p-1 border-r border-blue-200"></td>
-                            <td class="p-1 border-r border-blue-200"></td>
-                            <td class="p-1 border-r border-blue-200"></td>
-                            <td class="p-1 border-r border-blue-200"></td>
-                            <td class="p-1"></td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <!-- 결제 수단 및 영수/청구 구분 -->
-                <table class="w-full text-center border border-blue-600 mb-2 border-collapse">
-                    <tr class="bg-blue-50 text-blue-900 font-bold border-b border-blue-300">
-                        <td class="p-1 border-r border-blue-300">합계금액</td>
-                        <td class="p-1 border-r border-blue-300">현 금</td>
-                        <td class="p-1 border-r border-blue-300">수 표</td>
-                        <td class="p-1 border-r border-blue-300">어 음</td>
-                        <td class="p-1 border-r border-blue-300">외상미수금</td>
-                        <td rowspan="2"
-                            class="p-2 w-36 align-middle font-sans text-xs bg-blue-50/50 text-blue-900 border-l border-blue-300">
-                            이 금액을 (<span id="modalClaimOrReceipt" class="font-bold text-blue-800 text-sm">청구</span>) 함
-                        </td>
-                    </tr>
-                    <tr class="font-mono font-bold">
-                        <td class="p-1.5 border-r border-blue-300 text-blue-700 text-sm" id="modalTotalAmount"></td>
-                        <td class="p-1.5 border-r border-blue-300" id="modalCashAmount"></td>
-                        <td class="p-1.5 border-r border-blue-300" id="modalCheckAmount"></td>
-                        <td class="p-1.5 border-r border-blue-300" id="modalNoteAmount"></td>
-                        <td class="p-1.5 border-r border-blue-300" id="modalUnpaidAmount"></td>
-                    </tr>
-                </table>
-
-                <!-- 국세청 홈택스 공식 안내문 -->
-                <div class="mt-2 pt-2 border-t border-blue-300 text-[10px] text-gray-500 leading-tight">
-                    <p>본 인쇄물은 국세청 홈택스(www.hometax.go.kr)에서 발급, 또는 홈택스로 전송 된 양식과 동일한 구성의 종이(세금)계산서입니다.</p>
-                    <p class="mt-0.5">발급사실 확인은 상기 홈페이지의 "전자(세금)계산서 조회 &gt; 제3자 발급사실 조회 및 수정 발급사실 알림 &gt; 발급사실 조회 및 수정
-                        발급사실 알림 신청"을 이용하시기 바랍니다. 발급된 전자세금계산서는 손택스에서도 확인할 수 있습니다.</p>
+                <!-- 하단 국세청 홈택스 안내문 -->
+                <div class="mt-2.5 text-center text-[11px] text-gray-700 leading-relaxed">
+                    <p>본 인쇄물은 국세청 홈택스(www.hometax.go.kr)의 양식과 동일하게 제작된 전자(세금)계산서입니다.</p>
+                    <p>발급사실 확인은 국세청 홈택스의 "조회/발급 &gt; 전자(세금)계산서 &gt; 제3자 발급사실 조회 "를 이용하시기 바랍니다.</p>
                 </div>
             </div>
         </div>
@@ -522,27 +628,25 @@
                 const emptyMsg = rawInvoiceList.length === 0
                     ? "등록된 세금계산서 데이터가 없습니다."
                     : "선택한 기간에 해당하는 세금계산서가 없습니다.";
-                tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-gray-400">${emptyMsg}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-gray-400">${emptyMsg}</td></tr>`;
                 return;
             }
 
             filteredItems.forEach((item, index) => {
                 const taxBadge = item.is_tax_exempt
-                    ? `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">면세</span>`
-                    : `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-700 border border-gray-200">과세</span>`;
+                    ? `<span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200 whitespace-nowrap">면세</span>`
+                    : `<span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-700 border border-gray-200 whitespace-nowrap">과세</span>`;
 
                 const row = `
                     <tr class="hover:bg-gray-50 transition">
                         <td class="py-3 px-4 font-medium text-gray-900 whitespace-nowrap">${item.issue_date || ''}</td>
                         <td class="py-3 px-4 font-semibold">${item.supplier_name || ''}</td>
-                        <td class="py-3 px-4 text-gray-500 whitespace-nowrap">${item.supplier_biz_num || ''}</td>
-                        <td class="py-3 px-4 text-center">${taxBadge}</td>
-                        <td class="py-3 px-4 text-right font-medium text-blue-700">${(item.supply_value || 0).toLocaleString()} 원</td>
-                        <td class="py-3 px-4 text-right text-emerald-700">${(item.tax_amount || 0).toLocaleString()} 원</td>
-                        <td class="py-3 px-4 text-right font-bold text-gray-900">${(item.total_amount || 0).toLocaleString()} 원</td>
-                        <td class="py-3 px-4 text-xs font-mono text-gray-400">${item.approval_num || ''}</td>
-                        <td class="py-3 px-4 text-center">
-                            <button onclick="openInvoiceModal(${index})" class="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-medium px-3 py-1 rounded text-xs transition">
+                        <td class="py-3 px-4 text-center whitespace-nowrap">${taxBadge}</td>
+                        <td class="py-3 px-4 text-right font-medium text-blue-700 whitespace-nowrap">${(item.supply_value || 0).toLocaleString()} 원</td>
+                        <td class="py-3 px-4 text-right text-emerald-700 whitespace-nowrap">${(item.tax_amount || 0).toLocaleString()} 원</td>
+                        <td class="py-3 px-4 text-right font-bold text-gray-900 whitespace-nowrap">${(item.total_amount || 0).toLocaleString()} 원</td>
+                        <td class="py-3 px-4 text-center whitespace-nowrap">
+                            <button onclick="openInvoiceModal(${index})" class="inline-flex items-center justify-center bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-medium px-3 py-1 rounded text-xs transition whitespace-nowrap">
                                 🖨️ 출력
                             </button>
                         </td>
@@ -558,7 +662,7 @@
 
             const isExempt = !!item.is_tax_exempt;
 
-            document.getElementById('modalInvoiceTitle').innerText = isExempt ? '전자계산서(면세)' : '전자세금계산서';
+            document.getElementById('modalInvoiceTitle').innerText = isExempt ? '전자계산서' : '전자세금계산서';
             document.getElementById('modalApprovalNum').innerText = item.approval_num || '';
 
             // 공급자 정보 바인딩
@@ -580,13 +684,42 @@
             document.getElementById('modalReceiverBizType').innerText = item.receiver_biz_type || '';
             document.getElementById('modalReceiverBizItem').innerText = item.receiver_biz_item || '';
             document.getElementById('modalReceiverEmail').innerText = item.receiver_email || '';
+            document.getElementById('modalReceiverEmail2').innerText = item.receiver_email2 || '';
 
             // 작성일자 및 금액 요약 바인딩
             document.getElementById('modalIssueDate').innerText = item.issue_date || '';
             document.getElementById('modalSupplyValue').innerText = (item.supply_value || 0).toLocaleString();
             document.getElementById('modalTaxAmount').innerText = isExempt ? '0' : (item.tax_amount || 0).toLocaleString();
-            document.getElementById('modalModifyReason').innerText = '해당없음';
+            document.getElementById('modalModifyReason').innerText = '';
             document.getElementById('modalHeaderRemarks').innerText = item.remarks || '';
+
+            // 면세 여부에 따라 요약 테이블 공급가액 + 세액 칸 병합/분리
+            const summarySupplyHeader = document.getElementById('modalSummarySupplyHeader');
+            const summaryTaxHeader = document.getElementById('modalSummaryTaxHeader');
+            const summarySupplyCell = document.getElementById('modalSupplyValue');
+            const summaryTaxCell = document.getElementById('modalTaxAmount');
+
+            if (isExempt) {
+                summarySupplyHeader.colSpan = 2;
+                summarySupplyHeader.classList.remove('invoice-divider-r');
+                summarySupplyHeader.classList.add('border-r', 'border-blue-400');
+                summaryTaxHeader.classList.add('hidden');
+
+                summarySupplyCell.colSpan = 2;
+                summarySupplyCell.classList.remove('invoice-divider-r');
+                summarySupplyCell.classList.add('border-r', 'border-blue-400');
+                summaryTaxCell.classList.add('hidden');
+            } else {
+                summarySupplyHeader.colSpan = 1;
+                summarySupplyHeader.classList.remove('border-r', 'border-blue-400');
+                summarySupplyHeader.classList.add('invoice-divider-r');
+                summaryTaxHeader.classList.remove('hidden');
+
+                summarySupplyCell.colSpan = 1;
+                summarySupplyCell.classList.remove('border-r', 'border-blue-400');
+                summarySupplyCell.classList.add('invoice-divider-r');
+                summaryTaxCell.classList.remove('hidden');
+            }
 
             // 품목 일자 (월/일) 분리
             let month = '';
@@ -616,6 +749,24 @@
             document.getElementById('modalItemTax').innerText = isExempt ? '0' : (item.tax_amount || 0).toLocaleString();
             document.getElementById('modalItemRemarks').innerText = item.remarks || '';
 
+            // 면세 여부에 따라 품목 테이블 공급가액 + 세액 칸 병합/분리
+            const itemSupplyHeader = document.getElementById('modalItemSupplyHeader');
+            const itemTaxHeader = document.getElementById('modalItemTaxHeader');
+            const itemSupplyCells = document.querySelectorAll('.item-supply-cell');
+            const itemTaxCells = document.querySelectorAll('.item-tax-cell');
+
+            if (isExempt) {
+                itemSupplyHeader.colSpan = 2;
+                itemTaxHeader.classList.add('hidden');
+                itemSupplyCells.forEach(cell => { cell.colSpan = 2; });
+                itemTaxCells.forEach(cell => { cell.classList.add('hidden'); });
+            } else {
+                itemSupplyHeader.colSpan = 1;
+                itemTaxHeader.classList.remove('hidden');
+                itemSupplyCells.forEach(cell => { cell.colSpan = 1; });
+                itemTaxCells.forEach(cell => { cell.classList.remove('hidden'); });
+            }
+
             // 하단 합계/영수-청구 및 결제 금액 반영
             const claimOrReceipt = item.claim_or_receipt || '청구';
             document.getElementById('modalTotalAmount').innerText = (item.total_amount || 0).toLocaleString();
@@ -634,7 +785,8 @@
         }
 
         async function clearInvoices() {
-            if (!confirm("전체 데이터를 정말 초기화하시겠습니까?")) return;
+            if (!confirm("전체 데이터를 초기화하시겠습니까?")) return;
+            if (!confirm("초기화된 데이터는 복구할 수 없습니다. 진짜로 전체 데이터를 초기화하시겠습니까?")) return;
             await fetch(`${API_BASE}/invoices`, { method: 'DELETE' });
             fetchInvoices();
         }
