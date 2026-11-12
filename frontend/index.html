@@ -79,19 +79,19 @@
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
             <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
                 <span class="text-gray-500 text-sm font-medium">총 건수</span>
-                <p id="totalCount" class="text-2xl font-bold text-gray-900 mt-1">0 건</p>
+                <p id="totalCount" class="text-2xl font-bold text-gray-900 mt-1 whitespace-nowrap">0 건</p>
             </div>
             <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
                 <span class="text-gray-500 text-sm font-medium">총 공급가액</span>
-                <p id="totalSupply" class="text-2xl font-bold text-blue-600 mt-1">0 원</p>
+                <p id="totalSupply" class="text-2xl font-bold text-blue-600 mt-1 whitespace-nowrap">0 원</p>
             </div>
             <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
                 <span class="text-gray-500 text-sm font-medium">총 세액</span>
-                <p id="totalTax" class="text-2xl font-bold text-emerald-600 mt-1">0 원</p>
+                <p id="totalTax" class="text-2xl font-bold text-emerald-600 mt-1 whitespace-nowrap">0 원</p>
             </div>
             <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
                 <span class="text-gray-500 text-sm font-medium">총 합계금액</span>
-                <p id="totalAmount" class="text-2xl font-bold text-indigo-600 mt-1">0 원</p>
+                <p id="totalAmount" class="text-2xl font-bold text-indigo-600 mt-1 whitespace-nowrap">0 원</p>
             </div>
         </div>
 
@@ -100,7 +100,7 @@
             <div
                 class="p-5 border-b border-gray-200 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
                 <div class="flex flex-wrap items-center gap-2">
-                    <input type="text" id="searchInput" oninput="fetchInvoices()" placeholder="공급자 상호 또는 사업자번호 검색..."
+                    <input type="text" id="searchInput" oninput="fetchInvoices()" placeholder="공급자 상호 검색..."
                         class="w-full sm:w-60 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
 
                     <!-- 기간 지정 필터 -->
@@ -113,30 +113,27 @@
                         <input type="date" id="endDate" onchange="applyFilters()"
                             class="border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:border-blue-500">
                         <button type="button" onclick="resetDateFilter()"
-                            class="px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 rounded transition">기간
+                            class="px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 rounded transition whitespace-nowrap">기간
                             초기화</button>
                     </div>
                 </div>
 
                 <button onclick="clearInvoices()"
                     class="text-red-600 hover:text-red-800 text-sm font-medium self-end lg:self-auto whitespace-nowrap">전체
-                    데이터
-                    초기화</button>
+                    데이터 초기화</button>
             </div>
 
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm text-gray-600">
                     <thead class="bg-gray-50 text-gray-700 uppercase font-semibold text-xs border-b border-gray-200">
                         <tr>
-                            <th class="py-3 px-4">작성일자</th>
-                            <th class="py-3 px-4">공급자 상호</th>
-                            <th class="py-3 px-4 whitespace-nowrap">사업자번호</th>
-                            <th class="py-3 px-4 text-center">과세구분</th>
-                            <th class="py-3 px-4 text-right">공급가액</th>
-                            <th class="py-3 px-4 text-right">세액</th>
-                            <th class="py-3 px-4 text-right">합계금액</th>
-                            <th class="py-3 px-4">승인번호</th>
-                            <th class="py-3 px-4 text-center">출력</th>
+                            <th class="py-3 px-4 whitespace-nowrap">작성일자</th>
+                            <th class="py-3 px-4 whitespace-nowrap">공급자 상호</th>
+                            <th class="py-3 px-4 text-center whitespace-nowrap">과세구분</th>
+                            <th class="py-3 px-4 text-right whitespace-nowrap">공급가액</th>
+                            <th class="py-3 px-4 text-right whitespace-nowrap">세액</th>
+                            <th class="py-3 px-4 text-right whitespace-nowrap">합계금액</th>
+                            <th class="py-3 px-4 text-center whitespace-nowrap">출력</th>
                         </tr>
                     </thead>
                     <tbody id="invoiceTableBody" class="divide-y divide-gray-100">
@@ -522,27 +519,25 @@
                 const emptyMsg = rawInvoiceList.length === 0
                     ? "등록된 세금계산서 데이터가 없습니다."
                     : "선택한 기간에 해당하는 세금계산서가 없습니다.";
-                tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-gray-400">${emptyMsg}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-gray-400">${emptyMsg}</td></tr>`;
                 return;
             }
 
             filteredItems.forEach((item, index) => {
                 const taxBadge = item.is_tax_exempt
-                    ? `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">면세</span>`
-                    : `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-700 border border-gray-200">과세</span>`;
+                    ? `<span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200 whitespace-nowrap">면세</span>`
+                    : `<span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-700 border border-gray-200 whitespace-nowrap">과세</span>`;
 
                 const row = `
                     <tr class="hover:bg-gray-50 transition">
                         <td class="py-3 px-4 font-medium text-gray-900 whitespace-nowrap">${item.issue_date || ''}</td>
                         <td class="py-3 px-4 font-semibold">${item.supplier_name || ''}</td>
-                        <td class="py-3 px-4 text-gray-500 whitespace-nowrap">${item.supplier_biz_num || ''}</td>
-                        <td class="py-3 px-4 text-center">${taxBadge}</td>
-                        <td class="py-3 px-4 text-right font-medium text-blue-700">${(item.supply_value || 0).toLocaleString()} 원</td>
-                        <td class="py-3 px-4 text-right text-emerald-700">${(item.tax_amount || 0).toLocaleString()} 원</td>
-                        <td class="py-3 px-4 text-right font-bold text-gray-900">${(item.total_amount || 0).toLocaleString()} 원</td>
-                        <td class="py-3 px-4 text-xs font-mono text-gray-400">${item.approval_num || ''}</td>
-                        <td class="py-3 px-4 text-center">
-                            <button onclick="openInvoiceModal(${index})" class="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-medium px-3 py-1 rounded text-xs transition">
+                        <td class="py-3 px-4 text-center whitespace-nowrap">${taxBadge}</td>
+                        <td class="py-3 px-4 text-right font-medium text-blue-700 whitespace-nowrap">${(item.supply_value || 0).toLocaleString()} 원</td>
+                        <td class="py-3 px-4 text-right text-emerald-700 whitespace-nowrap">${(item.tax_amount || 0).toLocaleString()} 원</td>
+                        <td class="py-3 px-4 text-right font-bold text-gray-900 whitespace-nowrap">${(item.total_amount || 0).toLocaleString()} 원</td>
+                        <td class="py-3 px-4 text-center whitespace-nowrap">
+                            <button onclick="openInvoiceModal(${index})" class="inline-flex items-center justify-center bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-medium px-3 py-1 rounded text-xs transition whitespace-nowrap">
                                 🖨️ 출력
                             </button>
                         </td>
@@ -634,7 +629,8 @@
         }
 
         async function clearInvoices() {
-            if (!confirm("전체 데이터를 정말 초기화하시겠습니까?")) return;
+            if (!confirm("전체 데이터를 초기화하시겠습니까?")) return;
+            if (!confirm("초기화된 데이터는 복구할 수 없습니다. 진짜로 전체 데이터를 초기화하시겠습니까?")) return;
             await fetch(`${API_BASE}/invoices`, { method: 'DELETE' });
             fetchInvoices();
         }
