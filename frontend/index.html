@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>전자세금계산서 관리 대시보드</title>
+    <title>전자세금계산서 조회 대시보드</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .invoice-outer {
@@ -98,29 +98,9 @@
     <div class="max-w-6xl mx-auto px-4 py-8">
         <!-- Header -->
         <header class="mb-8">
-            <h1 class="text-3xl font-bold text-gray-900">국세청 전자세금계산서 관리 시스템</h1>
-            <p class="text-gray-500 mt-1">홈택스에서 다운로드한 세금계산서 엑셀 파일을 업로드하고 관리하세요.</p>
+            <h1 class="text-3xl font-bold text-gray-900">국세청 전자세금계산서 조회 시스템</h1>
+            <p class="text-gray-500 mt-1">등록된 전자세금계산서 내역을 검색하고 출력할 수 있습니다.</p>
         </header>
-
-        <!-- Upload & Actions -->
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8">
-            <h2 class="text-lg font-semibold mb-3">엑셀 파일 업로드</h2>
-            <div class="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
-                <input type="file" id="fileInput" accept=".xlsx, .xls"
-                    class="block w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
-
-                <label
-                    class="inline-flex items-center space-x-2 cursor-pointer whitespace-nowrap border border-gray-200 px-3 py-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 transition">
-                    <input type="checkbox" id="isTaxExempt"
-                        class="w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500">
-                    <span class="text-sm font-medium text-gray-700">면세계산서</span>
-                </label>
-
-                <button onclick="uploadFile()"
-                    class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-lg transition whitespace-nowrap">업로드</button>
-            </div>
-            <div id="uploadStatus" class="mt-3 text-sm hidden"></div>
-        </div>
 
         <!-- Summary Cards -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
@@ -164,10 +144,6 @@
                             초기화</button>
                     </div>
                 </div>
-
-                <button onclick="clearInvoices()"
-                    class="text-red-600 hover:text-red-800 text-sm font-medium self-end lg:self-auto whitespace-nowrap">전체
-                    데이터 초기화</button>
             </div>
 
             <div class="overflow-x-auto">
@@ -539,43 +515,6 @@
             applyFilters();
         }
 
-        async function uploadFile() {
-            const input = document.getElementById('fileInput');
-            const isTaxExempt = document.getElementById('isTaxExempt').checked;
-            const status = document.getElementById('uploadStatus');
-
-            if (!input.files[0]) {
-                alert("엑셀 파일을 선택해주세요.");
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append('file', input.files[0]);
-            formData.append('is_tax_exempt', isTaxExempt);
-
-            status.className = "mt-3 text-sm text-blue-600 block";
-            status.innerText = "파일 분석 및 업로드 중...";
-
-            try {
-                const res = await fetch(`${API_BASE}/upload`, {
-                    method: 'POST',
-                    body: formData
-                });
-                const data = await res.json();
-
-                if (res.ok) {
-                    status.className = "mt-3 text-sm text-emerald-600 block";
-                    status.innerText = `성공! ${data.inserted}건 추가 (중복 ${data.duplicates}건 제외)`;
-                    fetchInvoices();
-                } else {
-                    throw new Error(data.detail || "업로드 실패");
-                }
-            } catch (err) {
-                status.className = "mt-3 text-sm text-red-600 block";
-                status.innerText = err.message;
-            }
-        }
-
         async function fetchInvoices() {
             const query = document.getElementById('searchInput').value;
             const url = query ? `${API_BASE}/invoices?search=${encodeURIComponent(query)}` : `${API_BASE}/invoices`;
@@ -782,13 +721,6 @@
 
         function closeInvoiceModal() {
             document.getElementById('invoiceModal').classList.add('hidden');
-        }
-
-        async function clearInvoices() {
-            if (!confirm("전체 데이터를 초기화하시겠습니까?")) return;
-            if (!confirm("초기화된 데이터는 복구할 수 없습니다. 진짜로 전체 데이터를 초기화하시겠습니까?")) return;
-            await fetch(`${API_BASE}/invoices`, { method: 'DELETE' });
-            fetchInvoices();
         }
 
         fetchInvoices();
